@@ -32,7 +32,9 @@ get_brightness() {
 }
 
 preapply() {
-	/etc/init.d/rainbow-animator pause
+	if [ -x /etc/init.d/rainbow-animator ]; then
+		/etc/init.d/rainbow-animator pause
+	fi
 
 	local brightness_level
 	brightness_level="$(($(brightness) / 32))"
@@ -106,7 +108,9 @@ set_led() {
 }
 
 postapply() {
-	/etc/init.d/rainbow-animator reload
+	if [ -x /etc/init.d/rainbow-animator ]; then
+		/etc/init.d/rainbow-animator reload
+	fi
 }
 
 boot_sequence() {

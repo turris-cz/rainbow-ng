@@ -11,7 +11,9 @@ led2sysfs() {
 
 preapply() {
 	# TODO we can use pattern trigger to replace animator
-	/etc/init.d/rainbow-animator pause
+	if [ -x /etc/init.d/rainbow-animator ]; then
+		/etc/init.d/rainbow-animator pause
+	fi
 }
 
 set_led() {
@@ -60,5 +62,7 @@ set_led() {
 }
 
 postapply() {
-	/etc/init.d/rainbow-animator reload
+	if [ -x /etc/init.d/rainbow-animator ]; then
+		/etc/init.d/rainbow-animator reload
+	fi
 }
