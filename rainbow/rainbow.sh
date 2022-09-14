@@ -13,12 +13,10 @@ loadsrc backend
 
 ################################################################################
 usage() {
-	echo "Usage: $0 [OPTION].. <OPERATION>..." >&2
-}
-help() {
-	usage
 	cat >&2 <<-EOF
 		Turris leds manipulation.
+
+		Usage: $0 [OPTION].. <OPERATION>...
 
 		Options:
 		  -p INT  Set priority to given led setting (in default 50 is used)
@@ -26,13 +24,17 @@ help() {
 		  -l      List all available LEDs by name
 		  -x      Run in debug mode
 		  -h      Print this help text and exit
+
 		Operations:
-		  reset  Reset rainbow state (wipe any runtime changes)
+		  reset       Reset rainbow state (wipe any runtime changes)
 		  brightness  Set upper limit on brightness of all leds
-		  all  Configure all available leds at once
-		  ledX  Where X is number (up to 12 on Omnia and 8 on 1.x)
+		  all         Configure all available leds at once
+		  ledX        Where X is number (up to 12 on Omnia and 8 on 1.x)
 		  Configure specific led by name:
 		    $LEDS
+
+		Every operation has some additional arguments. You can list them by
+		passing -h option after specifying the operation.
 	EOF
 }
 
@@ -64,7 +66,7 @@ while getopts "p:n:lxh" opt; do
 			set -x
 			;;
 		h)
-			help
+			usage
 			exit 0
 			;;
 		*)
