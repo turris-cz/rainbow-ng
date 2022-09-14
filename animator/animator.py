@@ -29,8 +29,8 @@ state: dict[int, dict] = {}
 
 
 def report(*args, **kwargs):
-    """The replacement for simple print that immediatelly flushes output. The issue here is with pipe setup in procd
-    that does not buffer simply to the end of line. The effect is that simple print is not immediatelly displayed in
+    """The replacement for simple print that immediately flushes output. The issue here is with pipe setup in procd
+    that does not buffer simply to the end of line. The effect is that simple print is not immediately displayed in
     logs without this flush.
     """
     print(*args, **kwargs)
