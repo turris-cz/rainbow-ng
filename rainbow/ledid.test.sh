@@ -10,7 +10,7 @@ fail() {
 LEDS="power lan-0 lan-1 wlan-1 indicator-1"
 
 valid() {
-	is_valid_led "$1" || fail "Led should be valid but it is not: $1"
+	is_valid_led "$1" || fail "LED should be valid but it is not: $1"
 }
 
 not_valid() {

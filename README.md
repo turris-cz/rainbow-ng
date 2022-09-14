@@ -81,7 +81,7 @@ The full list of available activities is available by invoking:
 
 ### Animate
 
-This allows specification of animation pattern. The simplest variant is periodic
+This allows the specification of animation patterns. The simplest variant is periodic
 enable and disable of LED but more complex patterns can be specified as well.
 
 The animation is specified as set of color and time in nanoseconds pairs. The

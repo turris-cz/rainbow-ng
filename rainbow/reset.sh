@@ -7,7 +7,7 @@ reset_help() {
 		Reset current runtime configuration.
 
 		Options:
-		  -n  Do not remove current configuration only apply it
+		  -n  Do not remove the current configuration. Only apply it
 		  -a  Reset all priority levels and slots not just the current one
 		  -b  Run boot sequence as part of reset
 		  -h  Print this help text and exit

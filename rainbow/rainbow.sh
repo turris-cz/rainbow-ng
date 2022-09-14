@@ -45,7 +45,7 @@ while getopts "p:n:lxh" opt; do
 			if [ "$OPTARG" -ge 0 ] && [ "$OPTARG" -le 100 ]; then
 				priority="$OPTARG"
 			else
-				echo "Priority is not in range from 0 to 100: $OPTARG" >&2
+				echo "Priority is not in the range from 0 to 100: $OPTARG" >&2
 				usage
 			fi
 			;;

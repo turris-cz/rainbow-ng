@@ -9,7 +9,7 @@ led_animate_help() {
 		Led mode for '$1' that autonomously changes color based on pattern.
 		The pattern is combination of color and time. The time is in
 		miliseconds. The color is of the same format as when led color is being
-		specified. This includes the inheritence which refers to the color of
+		specified. This includes the inheritance, which refers to the color of
 		led outside of the animation.
 
 		Options:
