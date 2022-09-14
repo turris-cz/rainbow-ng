@@ -16,11 +16,8 @@ led_defaults() {
 		power)
 			color_r=0 color_g=255 color_b=0
 			;;
-		lan*|wlan*)
-			color_r=0 color_g=0 color_b=255
-			;;
-		wan)
-			color_r=0 color_g=255 color_b=255
+		*)
+			color_r=255 color_g=255 color_b=255
 			;;
 	esac
 }
