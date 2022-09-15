@@ -55,16 +55,6 @@ set_led() {
 			power)
 				mode="enable"
 				;;
-			#wlan*)
-			#	local trigger
-			#	loadsrc pci
-			#	if trigger="$(pci_device_activity_detect "$led" "/sys/bus/pci/devices/0000:0${led#pci}:00.0")"; then
-			#		mode="activity"
-			#		set "$trigger"
-			#	else
-			#		mode="disable"
-			#	fi
-			#	;;
 		esac
 	fi
 
