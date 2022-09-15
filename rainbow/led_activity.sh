@@ -47,7 +47,7 @@ op_led_activity() {
 			mode_args="activity"
 			shift || true
 			;;
-		activity|activity-inverted|heartbeat|heatbeat-inverted|disk-activity|usbport)
+		activity|activity-inverted|heartbeat|heartbeat-inverted|disk-activity|usbport)
 			mode_args="$1"
 			shift
 			;;
@@ -133,7 +133,7 @@ apply_activity() {
 	local sysfs
 	sysfs="$(led2sysfs "$led")"
 	case "$trigger" in
-		activity|activity-inverted|heartbeat|heatbeat-inverted)
+		activity|activity-inverted|heartbeat|heartbeat-inverted)
 			local systrigger="${trigger%-inverted}"
 			echo "$systrigger" >"$sysfs/trigger"
 			grep -qF "[$systrigger]" "$sysfs/trigger"

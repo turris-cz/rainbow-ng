@@ -117,12 +117,12 @@ _uci_system_section() {
 			default-on)
 				mode="enable"
 				;;
-			heatbeat)
+			heartbeat)
 				mode="activity"
 				if [ "$default" = "0" ]; then
-					mode_args="heatbeat"
+					mode_args="heartbeat"
 				else
-					mode_args="heatbeat-inverted"
+					mode_args="heartbeat-inverted"
 				fi
 				;;
 			netdev)
