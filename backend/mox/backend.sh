@@ -6,6 +6,8 @@ LEDS="activity"
 
 SYSFS="/sys/class/leds/mox:red:activity"
 
+loadsrc led_activity
+
 led2sysfs() {
 	local led="$1"
 	[ "$led" = "activity" ] || return
@@ -56,7 +58,6 @@ set_led() {
 	echo "none" > "$SYSFS/trigger"
 	echo "$brightness" > "$SYSFS/brightness"
 	if [ "$trigger" = "activity" ]; then
-		loadsrc led_activity
 		apply_activity "$led" "$@" \
 			|| echo "Warning: activity setup failed for: $led" >&2
 	else
