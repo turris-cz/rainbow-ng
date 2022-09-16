@@ -26,7 +26,7 @@ button-sync-install:
 	install -D -m 644 button-sync/button_sync.sh ${DESTDIR}${PREFIX}/libexec/rainbow/button_sync.sh
 
 animator-install:
-	install -D -m 644 animator/animator.py ${DESTDIR}${PREFIX}/libexec/rainbow/animator.py
+	install -D -m 755 animator/animator.py ${DESTDIR}${PREFIX}/libexec/rainbow/animator.py
 
 mox-install:
 	install -D -m 644 backend/mox/animator_backend.py ${DESTDIR}${PREFIX}/libexec/rainbow/animator_backend.py
