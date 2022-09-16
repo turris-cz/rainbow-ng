@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright 2022, CZ.NIC z.s.p.o. (https://www.nic.cz/)
+
 # Turris Omnia backend for generic rainbow script
 LEDS="power lan-0 lan-1 lan-2 lan-3 lan-4 wan wlan-1 wlan-2 wlan-3 indicator-1 indicator-2"
 

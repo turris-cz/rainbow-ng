@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright 2022, CZ.NIC z.s.p.o. (https://www.nic.cz/)
+
 # Canonize color to RGB 0-255 format.
 # Sets three variables: color_r, color_g, color_b
 parse_color() {

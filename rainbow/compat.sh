@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright 2022, CZ.NIC z.s.p.o. (https://www.nic.cz/)
+
 # These are common arguments that were previously provided by rainbow but are
 # now obsolete. They are implemented separately so backend can choose which it
 # has to support (depending on rainbow introduction to the platform).

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright 2022, CZ.NIC z.s.p.o. (https://www.nic.cz/)
+
 led_activity_usage() {
 	echo "Usage: $0 $1 activity [OPTION].. [TRIGGER]" >&2
 }

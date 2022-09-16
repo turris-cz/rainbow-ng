@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright 2022, CZ.NIC z.s.p.o. (https://www.nic.cz/)
+
 import argparse
 import fcntl
 import importlib.util

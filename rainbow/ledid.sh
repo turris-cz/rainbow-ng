@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright 2022, CZ.NIC z.s.p.o. (https://www.nic.cz/)
+
 # Check if provided led identifier is valid.
 # This covers not only those fron LEDS but also ledX where X is number and all.
 is_valid_led() {

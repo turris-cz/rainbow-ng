@@ -1,4 +1,8 @@
 #!/bin/sh
+
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright 2022, CZ.NIC z.s.p.o. (https://www.nic.cz/)
+
 set -eu
 
 rainbowdir="/var/run/rainbow"

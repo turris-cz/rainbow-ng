@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright 2022, CZ.NIC z.s.p.o. (https://www.nic.cz/)
+
 # Turris 1.x backend for generic rainbow script
 LEDS="wan lan-1 lan-2 lan-3 lan-4 lan-5 wlan power"
 

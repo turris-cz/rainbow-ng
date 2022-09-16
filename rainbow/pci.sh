@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright 2022, CZ.NIC z.s.p.o. (https://www.nic.cz/)
+
 loadsrc led_activity
 
 # In some cases we need to detect what is inserted in the specific PCI slot and

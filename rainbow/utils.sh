@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright 2022, CZ.NIC z.s.p.o. (https://www.nic.cz/)
+
 # Common utilities for rainbow scripts
 
 # All rainbow scripts should set this but by adding it here as well we make sure
