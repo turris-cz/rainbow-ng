@@ -44,7 +44,7 @@ base_config() {
 		default_r="$color_r" default_g="$color_g" default_b="$color_b"
 		default_mode="$mode" default_mode_args="$mode_args"
 		for led in $LEDS; do
-			_uci_rainbow_section "$led"
+			_uci_rainbow_section "$(echo "$led" | sed 's|-|_|')"
 			echo "$color_r	$color_g	$color_b	$mode${mode_args:+ }$mode_args"
 		done >"$rainbowdir/000-base"
 
