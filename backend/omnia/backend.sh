@@ -9,6 +9,7 @@ LEDS="power lan-0 lan-1 lan-2 lan-3 lan-4 wan wlan-1 wlan-2 wlan-3 indicator-1 i
 SYSFS="/sys/class/leds/rgb:power/device"
 
 loadsrc led_activity
+loadsrc compat
 
 led2sysfs() {
 	local led="$1"
