@@ -8,6 +8,7 @@ set -eu
 
 loadsrc backend
 loadsrc state
+loadsrc uci
 
 type get_brightness >/dev/null \
 	|| fail "Button sync is not supported on this board!"
