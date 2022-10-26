@@ -23,7 +23,7 @@ rainbow-install:
 	ln -sf ${PREFIX}/libexec/rainbow/rainbow.sh ${DESTDIR}${PREFIX}/bin/rainbow
 
 button-sync-install:
-	install -D -m 644 button-sync/button_sync.sh ${DESTDIR}${PREFIX}/libexec/rainbow/button_sync.sh
+	install -D -m 755 button-sync/button_sync.sh ${DESTDIR}${PREFIX}/libexec/rainbow/button_sync.sh
 
 animator-install:
 	install -D -m 755 animator/animator.py ${DESTDIR}${PREFIX}/libexec/rainbow/animator.py
