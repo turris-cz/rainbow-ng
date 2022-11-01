@@ -31,6 +31,15 @@ led_defaults() {
 	false
 }
 
+# This function is optional and allows overriding some of the triggers before
+# they are written to sysfs, for example activity -> omnia-mcu
+# It is expected to echo the new trigger name
+get_led_trigger() {
+	local led="$1"
+	local trigger="$2"
+	false
+}
+
 # This function is optional and is required only for button_sync.sh.
 # It is really needed only if there is a hardware way to modify brightness.
 # It is expected to echo the current brightness level as integer between 0 and

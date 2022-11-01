@@ -52,6 +52,16 @@ preapply() {
 	echo "$(((brightness_level * 100 + 127) / 255))" > "$SYSFS/brightness"
 }
 
+get_led_trigger() {
+	local led="$1"
+	local trigger="$2"
+	if [ "$trigger" = activity ]; then
+		echo omnia-mcu
+	else
+		echo "$trigger"
+	fi
+}
+
 set_led() {
 	local led="$1" r="$2" g="$3" b="$4" mode="$5"
 	shift 5
@@ -81,16 +91,13 @@ set_led() {
 	sysfs="$(led2sysfs "$led")"
 	brightness="$(cat "$sysfs/max_brightness")"
 	case "$mode" in
-		auto)
-			trigger="omnia-mcu"
+		auto|activity)
+			trigger="activity"
 			;;
 		disable)
 			brightness=0
 			;;
 		enable)
-			;;
-		activity)
-			trigger="activity"
 			;;
 		animate)
 			# For animation we rely on animator

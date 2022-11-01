@@ -134,37 +134,43 @@ apply_activity() {
 	local led="$1"; shift
 	local trigger="${1:-}"
 	local sysfs
+
+	local systrigger="${trigger%-inverted}"
+	# allow backend.sh to override trigger
+	if [ -n "$trigger" ] && type get_led_trigger >/dev/null; then
+		systrigger="$(get_led_trigger "${led}" "${systrigger}")"
+	fi
+
 	sysfs="$(led2sysfs "$led")"
 	case "$trigger" in
 		activity|activity-inverted|heartbeat|heartbeat-inverted)
-			local systrigger="${trigger%-inverted}"
 			echo "$systrigger" >"$sysfs/trigger"
 			grep -qF "[$systrigger]" "$sysfs/trigger"
-			if [ "${trigger%-inverted}" == "$trigger" ]; then
+			if [ "${trigger%-inverted}" = "$trigger" ]; then
 				echo "0" >"$sysfs/invert"
 			else
 				echo "1" >"$sysfs/invert"
 			fi
 			;;
 		disk-activity|mmc*|ata*|netfilter-*)
-			echo "$trigger" >"$sysfs/trigger"
-			grep -qF "[$trigger]" "$sysfs/trigger"
+			echo "$systrigger" >"$sysfs/trigger"
+			grep -qF "[$systrigger]" "$sysfs/trigger"
 			;;
 		usbport)
-			echo "$trigger" >"$sysfs/trigger"
-			grep -qF "[$trigger]" "$sysfs/trigger" || return
+			echo "$systrigger" >"$sysfs/trigger"
+			grep -qF "[$systrigger]" "$sysfs/trigger" || return
 			for port in "$sysfs"/ports/*; do
 				echo 1 > "$port"
 			done
 			;;
 		phy*)
-			echo "${trigger}tpt" >"$sysfs/trigger"
-			grep -qF "[${trigger}tpt]" "$sysfs/trigger"
+			echo "${systrigger}tpt" >"$sysfs/trigger"
+			grep -qF "[${systrigger}tpt]" "$sysfs/trigger"
 			;;
 		netdev-*)
 			echo "netdev" >"$sysfs/trigger"
 			grep -qF '[netdev]' "$sysfs/trigger" || return
-			echo "${trigger#netdev-}" >"$sysfs/device_name"
+			echo "${systrigger#netdev-}" >"$sysfs/device_name"
 			echo 1 >"$sysfs/link"
 			echo 1 >"$sysfs/rx"
 			echo 1 >"$sysfs/tx"

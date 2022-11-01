@@ -52,6 +52,19 @@ preapply() {
 	echo $brightness_level > $SYSFS/brightness_level
 }
 
+get_led_trigger() {
+	local led="$1"
+	local trigger="$2"
+	if [ "$trigger" = activity ]; then
+        case "$led" in
+            wlan) echo phy0tpt ;;
+            *) echo turris1x-cpld ;;
+        esac
+	else
+		echo "$trigger"
+	fi
+}
+
 set_led() {
 	local led="$1" r="$2" g="$3" b="$4" mode="$5"
 	shift 5
@@ -76,19 +89,13 @@ set_led() {
 
 	local brightness=1 trigger="none"
 	case "$mode" in
-		auto)
-			case "$led" in
-				wlan) trigger="phy0tpt" ;;
-				*) trigger="turris1x-cpld" ;;
-			esac
+		auto|activity)
+			trigger="activity"
 			;;
 		disable)
 			brightness=0
 			;;
 		enable)
-			;;
-		activity)
-			trigger="activity"
 			;;
 		animate)
 			# For animation we rely on animator
