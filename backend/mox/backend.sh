@@ -14,6 +14,11 @@ led2sysfs() {
 	echo "$SYSFS"
 }
 
+led_defaults() {
+	local led="$1"
+	color_r=255 color_g=0 color_b=0
+}
+
 preapply() {
 	# TODO we can use pattern trigger to replace animator
 	if [ -x /etc/init.d/rainbow-animator ]; then
