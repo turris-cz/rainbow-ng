@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2] - 2022-11-01
+### Fixed
+- Enforce bash as there is plenty of bashism inside
+- Add missing includes
+- Fix button-sync
+- Add missing `compat_intensity` function
+
 ## [0.1.1] - 2022-09-22
 ### Fixed
 - Fixed UCI support (replace unsupported dashes with underscores)
