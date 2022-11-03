@@ -7,6 +7,13 @@
 brightness() { 
 	if [ "${1:-}" = "fetch" ] || [ -z "${brightness:-}" ]; then
 		__brightness="$(uci -q get "rainbow.all.brightness" || echo 255)"
+
+		# remove leading zeros
+		__brightness="$(echo "$__brightness" | sed 's/^[0]*//')"
+		if [ -z "$__brightness" ]; then
+			__brightness=0
+		fi
+
 		if [ "$__brightness" -lt 0 ] || [ "$__brightness" -gt 255 ]; then
 			__brightness=255
 		fi
