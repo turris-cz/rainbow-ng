@@ -57,8 +57,17 @@ compat_intensity() {
 compat_get() {
 	local max="$1"; shift
 	if [ "${1:-}" = "intensity" ]; then
-		echo "$(($2 * max / 255))"
-		shift 2
+		local brightness
+		if type get_brightness_raw >/dev/null; then
+			brightness=$(get_brightness_raw);
+		elif type get_brightness >/dev/null; then
+			brightness=$(get_brightness);
+		else
+			echo "Backend doesn't provide a get_brightness_raw or get_brightness function" >&2
+			exit 2
+		fi
+		echo "$brightness"
+		shift
 	else
 		echo "Invalid get usage. Missing 'intensity' argument." >&2
 		exit 2

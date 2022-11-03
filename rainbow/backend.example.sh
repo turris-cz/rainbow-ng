@@ -39,6 +39,15 @@ get_brightness() {
 	false
 }
 
+# This function is optional and only makes sense if get_brightness changes the
+# range compared to the sysfs.
+# It is expected to echo the current brightness level as integer in device the
+# specific range.
+get_brightness_raw() {
+	false
+}
+
+
 # The optional function that is called before application of state using
 # set_led. This should be used to prepare environment as well as to pause
 # animator for example.

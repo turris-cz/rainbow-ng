@@ -28,9 +28,15 @@ led_defaults() {
 	esac
 }
 
-get_brightness() {
+get_brightness_raw() {
 	local cur
 	cur="$(cat "$SYSFS/brightness")"
+	echo "$cur"
+}
+
+get_brightness() {
+	local cur
+	cur="$(get_brightness_raw)"
 	echo $(((cur * 255 + 50) / 100))
 }
 
