@@ -144,12 +144,17 @@ apply_activity() {
 	sysfs="$(led2sysfs "$led")"
 	case "$trigger" in
 		activity|activity-inverted|heartbeat|heartbeat-inverted)
+			local inverted=0
+			if [ "${trigger%-inverted}" = "$trigger" ]; then
+				inverted=1
+				if ! [ -e "$sysfs/invert" ]; then
+					fail "invert not supported on this board:"
+				fi
+			fi
 			echo "$systrigger" >"$sysfs/trigger"
 			grep -qF "[$systrigger]" "$sysfs/trigger"
-			if [ "${trigger%-inverted}" = "$trigger" ]; then
-				echo "0" >"$sysfs/invert"
-			else
-				echo "1" >"$sysfs/invert"
+			if [ -e "$sysfs/invert" ]; then
+				echo "$inverted" > "$sysfs/invert"
 			fi
 			;;
 		disk-activity|mmc*|ata*|netfilter-*)
