@@ -97,7 +97,7 @@ light ups green color on the power LED:
 
 This section describes how to implement hardware integration for rainbow and
 what that actually means. This is here as developer documentation not expected
-by end-users to read this.
+to be read by end-users.
 
 The integration has to be done by implementing a shell file `backend.sh` and
 installed in the same directory as the rest of the rainbow. This directory in
