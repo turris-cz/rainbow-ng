@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.3] - 2022-11-14
+### Fixed
+- Fixed 096: value too great for base (error token is "096")
+- Fixed led_defaults: not found on Turris MOX
+- Fixed reader_loop: bad jump: 8388608 error on Turris 1.X
+
 ## [0.1.2] - 2022-11-01
 ### Fixed
 - Enforce bash as there is plenty of bashism inside
