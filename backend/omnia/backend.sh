@@ -71,7 +71,9 @@ set_led() {
 		esac
 	fi
 
-	local brightness=1 trigger="none"
+	local sysfs brightness trigger="none"
+	sysfs="$(led2sysfs "$led")"
+	brightness="$(cat "$sysfs/max_brightness")"
 	case "$mode" in
 		auto)
 			trigger="omnia-mcu"
@@ -92,8 +94,6 @@ set_led() {
 			;;
 	esac
 
-	local sysfs
-	sysfs="$(led2sysfs "$led")"
 	# We have to disable trigger first to make sure that changes are correctly
 	# applied and not modified by this in the meantime.
 	echo "none" > "$sysfs/trigger"
