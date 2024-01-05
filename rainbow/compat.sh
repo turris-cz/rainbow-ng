@@ -58,9 +58,9 @@ compat_get() {
 	local max="$1"; shift
 	if [ "${1:-}" = "intensity" ]; then
 		local brightness
-		if type get_brightness_raw >/dev/null; then
+		if type get_brightness_raw >/dev/null 2>&1; then
 			brightness=$(get_brightness_raw);
-		elif type get_brightness >/dev/null; then
+		elif type get_brightness >/dev/null 2>&1; then
 			brightness=$(get_brightness);
 		else
 			echo "Backend doesn't provide a get_brightness_raw or get_brightness function" >&2
