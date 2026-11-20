@@ -108,7 +108,7 @@ base_config() {
 		default_mode="$mode" default_mode_args="$mode_args"
 		for led in $LEDS; do
 			_uci_rainbow_section "$(echo "$led" | sed 's|-|_|')"
-			echo "$color_r	$color_g	$color_b	$mode${mode_args:+ }$mode_args"
+			echo "$color_r	$color_g	$color_b	$mode${mode_args:+	}$mode_args"
 		done >"$rainbowdir/000-base"
 
 		config_load system
@@ -116,7 +116,7 @@ base_config() {
 			color_r="-" color_g="-" color_b="-" mode="-" mode_args=""
 			sysfs="$(led2sysfs "$led")"; sysfs="${sysfs##*/}"
 			config_foreach _uci_system_section "led"
-			echo "$color_r	$color_g	$color_b	$mode${mode_args:+ }$mode_args"
+			echo "$color_r	$color_g	$color_b	$mode${mode_args:+	}$mode_args"
 		done >"$rainbowdir/000-system"
 	)
 	_base_config_updated="y"
