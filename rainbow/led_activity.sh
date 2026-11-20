@@ -51,6 +51,13 @@ op_led_activity() {
 			# We do not intentionally verify that these are available right
 			# now. The module with the trigger can be loaded later and the
 			# network device can be a hotplug one.
+			case "$1" in
+				*[!A-Za-z0-9_.:@-]*|netdev-????????????????*)
+					# The kernel takes at most 15 characters
+					echo "Invalid name of the network device: ${1#netdev-}" >&2
+					exit 2
+					;;
+			esac
 			mode_args="$1"
 			shift
 			;;
@@ -193,7 +200,9 @@ apply_activity() {
 			;;
 		netdev-*)
 			_set_trigger "$sysfs" "netdev" || return
-			if ! echo "${trigger#netdev-}" 2>/dev/null >"$sysfs/device_name"; then
+			# The kernel counts the newline into the length of the name, so
+			# it would refuse a name of the full 15 characters with it.
+			if ! printf '%s' "${trigger#netdev-}" 2>/dev/null >"$sysfs/device_name"; then
 				warning "The kernel refused the network device name: ${trigger#netdev-}"
 				return 1
 			fi

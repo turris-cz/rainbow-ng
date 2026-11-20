@@ -170,7 +170,9 @@ _uci_rainbow_options() {
 	if [ "$mode" = "activity" ]; then
 		config_get trigger "$led" "trigger" "activity"
 		case "$trigger" in
-			""|*[!A-Za-z0-9_.:@-]*)
+			""|-*|*[!A-Za-z0-9_.:@-]*|netdev-|netdev-????????????????*)
+				# The last two are a missing name of a network device
+				# and one longer than the 15 characters the kernel takes
 				warning "Ignoring invalid trigger '$trigger' in: rainbow.$led"
 				trigger="activity"
 				;;
@@ -202,6 +204,14 @@ _uci_system_section() {
 		local default trigger
 		config_get_bool default "$section" "default" "0"
 		config_get trigger "$section" "trigger" "none"
+		# The name is stored in the state file and passed on as an argument,
+		# so it must not hold anything that splits it into more of them.
+		case "$trigger" in
+			""|-*|*[!A-Za-z0-9_.:@-]*)
+				warning "Ignoring invalid trigger in: system.$section ($sysfs)"
+				return 0
+				;;
+		esac
 		case "$trigger" in
 			none)
 				[ "$default" != "1" ] \
@@ -233,7 +243,17 @@ _uci_system_section() {
 				config_get dev "$section" "dev"
 				config_get netmode "$section" "mode"
 				case "$dev" in
-					""|*[!A-Za-z0-9_.:@-]*)
+					""|-*|*[!A-Za-z0-9_.:@-]*|????????????????*)
+						# No name of a network device, which also has at
+						# most 15 characters. The trigger can't be set up
+						# without one, so keep the LED the way
+						# /etc/init.d/led configured it.
+						if [ -z "$dev" ]; then
+							warning "Missing network device in: system.$section ($sysfs)"
+						else
+							warning "Ignoring invalid network device '$dev' in: system.$section ($sysfs)"
+						fi
+						mode="ignore"
 						;;
 					*)
 						mode="activity"

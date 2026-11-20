@@ -39,6 +39,8 @@ set_led() {
 	fi
 	local global_brightness
 	global_brightness="$(brightness)"
+	# The color is used in shell arithmetic, so make sure it is a number
+	is_uint "$r" || r=0
 
 	local brightness=255 trigger="none"
 	case "$mode" in

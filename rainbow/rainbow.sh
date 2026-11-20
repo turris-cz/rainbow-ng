@@ -142,7 +142,7 @@ call_set_led() {
 	while read -r arg; do
 		set "$@" "$arg"
 	done <<-EOF
-		$(echo "$mode_args" | tr '\t' '\n')
+		$(printf '%s\n' "$mode_args" | tr '\t' '\n')
 	EOF
 	# An LED that can't be configured must not stop the remaining ones
 	set_led "$@" \
