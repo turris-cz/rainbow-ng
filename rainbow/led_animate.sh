@@ -42,5 +42,9 @@ op_led_animate() {
 	shift $(($# - SHIFTARGS))
 	mode_args="$animation"
 
+	# The animation is performed by the animator, which is a separate package
+	[ -x /etc/init.d/rainbow-animator ] \
+		|| warning "The animate mode needs the rainbow-animator package, which is not installed."
+
 	SHIFTARGS=$#
 }
