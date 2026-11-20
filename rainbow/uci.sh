@@ -130,15 +130,30 @@ _uci_rainbow_section() {
 	! type led_defaults >/dev/null || led_defaults "$led"
 
 	config_get rawcolor "$led" "color" ""
-	parse_color "$rawcolor"
+	parse_color "$rawcolor" \
+		|| warning "Ignoring invalid color '$rawcolor' in: rainbow.$led"
 
 	config_get rawmode "$led" "state" "" # backward compatibility
 	config_get rawmode "$led" "mode" "$rawmode"
 	[ -n "$rawmode" ] || return 0
+	case "$rawmode" in
+		auto|disable|enable|activity|animate|ignore)
+			;;
+		*)
+			warning "Ignoring invalid mode '$rawmode' in: rainbow.$led"
+			return 0
+			;;
+	esac
 	mode="$rawmode"
 	mode_args=""
 	if [ "$mode" = "activity" ]; then
 		config_get trigger "$led" "trigger" "activity"
+		case "$trigger" in
+			""|*[!A-Za-z0-9_.:@-]*)
+				warning "Ignoring invalid trigger '$trigger' in: rainbow.$led"
+				trigger="activity"
+				;;
+		esac
 		mode_args="$trigger"
 	elif [ "$mode" = "animate" ]; then
 		local animation animation_color_r animation_color_g animation_color_b
