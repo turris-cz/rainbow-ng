@@ -11,18 +11,29 @@ loadsrc led_activity
 # If no device was detected or if activity for it is not supported it signals
 # failure with returned value.
 pci_device_activity_detect() {
-	local syspci="$1"
 	local led="$1"
+	local syspci="$2"
+	local name ata
 
 	if [ -d "$syspci/ieee80211" ]; then
-		[ -n "$(supported_activities "$led" -xF 'netdev')" ] || return
-		echo "netdev-$(ls -1 "$syspci/net" | head -1)"
+		if [ -n "$(supported_activities "$led" -xF 'netdev')" ]; then
+			name="$(ls -1 "$syspci/net" 2>/dev/null | head -1)"
+			if [ -n "$name" ]; then
+				echo "netdev-$name"
+				return
+			fi
+		fi
+		# There is no network interface yet, so follow the radio instead
+		name="$(ls -1 "$syspci/ieee80211" 2>/dev/null | head -1)"
+		[ -n "$name" ] || return
+		[ -n "$(supported_activities "$led" -xF "${name}tpt")" ] || return
+		echo "${name}tpt"
 		return
 	fi
 
 	for ata in "$syspci"/ata*; do
 		[ -d "$ata" ] || continue
-		[ -n "$(supported_activities "$led" -xF "$ata")" ] || continue
+		[ -n "$(supported_activities "$led" -xF "${ata##*/}")" ] || continue
 		echo "${ata##*/}"
 		return
 	done

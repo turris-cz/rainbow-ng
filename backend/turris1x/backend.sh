@@ -61,12 +61,12 @@ set_led() {
 			power)
 				mode="enable"
 				;;
-			wlan*)
-				local trigger
-				loadsrc pci
-				if trigger="$(pci_device_activity_detect "$led" "/sys/bus/pci/devices/0000:0${led#pci}:00.0")"; then
+			wlan)
+				# The CPLD has no hardware trigger for this LED, so follow
+				# the first wireless device when there is one.
+				if [ -n "$(supported_activities "$led" -xF 'phy0tpt')" ]; then
 					mode="activity"
-					set "$trigger"
+					set "phy0tpt"
 				else
 					mode="disable"
 				fi
@@ -77,10 +77,7 @@ set_led() {
 	local brightness=1 trigger="none"
 	case "$mode" in
 		auto)
-			case "$led" in
-				wlan) trigger="phy0tpt" ;;
-				*) trigger="turris1x-cpld" ;;
-			esac
+			trigger="turris1x-cpld"
 			;;
 		disable)
 			brightness=0

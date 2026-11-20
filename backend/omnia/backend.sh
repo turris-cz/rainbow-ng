@@ -62,9 +62,11 @@ set_led() {
 				mode="enable"
 				;;
 			wlan*)
+				# The LED was named pciN when this lookup was written, so N
+				# is taken for the number of the PCI bus of its slot.
 				local trigger
 				loadsrc pci
-				if trigger="$(pci_device_activity_detect "$led" "/sys/bus/pci/devices/0000:0${led#pci}:00.0")"; then
+				if trigger="$(pci_device_activity_detect "$led" "/sys/bus/pci/devices/0000:0${led#wlan-}:00.0")"; then
 					mode="activity"
 					set "$trigger"
 				else
