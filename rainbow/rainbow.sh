@@ -10,6 +10,10 @@ mkdir -p "$rainbowdir"
 [ "${RAINBOW_DIRECTORY_LOCKED-:}" = "y" ] \
 	|| RAINBOW_DIRECTORY_LOCKED="y" exec flock -x "$rainbowdir" "$0" "$@"
 
+# We hold the lock, so any temporary file found here was left behind by a run
+# that did not finish.
+rm -f "$rainbowdir"/.[0-9][0-9][0-9]-*.new
+
 . "$(dirname "$(readlink -f "$0")")/utils.sh"
 loadsrc state
 loadsrc ledid
