@@ -43,7 +43,16 @@ op_reset() {
 				;;
 		esac
 	done
-	SHIFTARGS=$((OPTIND - 1))
+	shift $((OPTIND - 1))
+	SHIFTARGS=$#
+	# What is left has to be the next operation
+	local next
+	next="$(next_argument "$@")"
+	if [ -n "$next" ] && ! is_operation "$next"; then
+		echo "Invalid argument for reset: $next" >&2
+		reset_usage
+		exit 2
+	fi
 
 	if [ "$nowipe" = "n" ]; then
 		if [ "$all" = "y" ]; then
@@ -51,6 +60,9 @@ op_reset() {
 		else
 			rm -f "$rainbowdir/$(printf "%03d" "$priority")-$slot"
 		fi
+		# That can include the files generated from UCI, which an earlier
+		# operation of this run may have created already.
+		_base_config_updated=""
 	fi
 
 	# Note: the boot sequence is silently ignored if there is none defined

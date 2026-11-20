@@ -80,6 +80,12 @@ op_led() {
 	local mode="" mode_args=""
 	local color_r="" color_g="" color_b=""
 	while [ $# -gt 0 ]; do
+		if [ -z "$1" ]; then
+			# An empty argument sets nothing, which is what a script gets
+			# when it passes a variable it left empty.
+			shift
+			continue
+		fi
 		if [ -z "$color_r" ] && [ -z "$color_g" ] && [ -z "$color_b" ]; then
 			if parse_color "$1" inherit; then
 				shift
@@ -95,14 +101,15 @@ op_led() {
 					;;
 				activity)
 					loadsrc led_activity
-					if led_activities_supported "$id"; then
-						mode="$1"
-						shift
-						loadsrc led_activity
-						op_led_activity "$id" "$@"
-						shift $(($# - SHIFTARGS))
-						continue
+					if ! led_activities_supported "$id"; then
+						echo "The activity mode is not available for: $id" >&2
+						exit 2
 					fi
+					mode="$1"
+					shift
+					op_led_activity "$id" "$@"
+					shift $(($# - SHIFTARGS))
+					continue
 					;;
 				animate)
 					mode="$1"
@@ -114,12 +121,23 @@ op_led() {
 					;;
 				inherit)
 					mode="-"
+					shift
+					continue
 					;;
 			esac
 		fi
 		break
 	done
 	SHIFTARGS=$#
+	# What is left has to be the next operation. Fail before anything is
+	# stored when it is not, as it is most likely a mistyped color or mode.
+	local next
+	next="$(next_argument "$@")"
+	if [ -n "$next" ] && ! is_operation "$next"; then
+		echo "Invalid color or mode for '$id': $next" >&2
+		led_usage "$id"
+		exit 2
+	fi
 
 	id="$(canonled "$id")"
 

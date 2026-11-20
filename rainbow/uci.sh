@@ -6,24 +6,23 @@
 loadsrc led_activity
 
 # Currently configured brightness level
-brightness() { 
-	if [ "${1:-}" = "fetch" ] || [ -z "${brightness:-}" ]; then
-		__brightness="$(uci -q get "rainbow.all.brightness" || echo 255)"
+# It is read from UCI every time. A variable can't stand in for it, as a value
+# an operation refused would then still be applied on the way out.
+brightness() {
+	local __brightness
+	__brightness="$(uci -q get "rainbow.all.brightness" || echo 255)"
 
-		# The value ends up in shell arithmetic, so it has to be a number
-		if ! is_uint "$__brightness"; then
-			warning "Ignoring invalid rainbow.all.brightness: $__brightness"
-			__brightness=255
-		fi
-		# This also removes the leading zeros
-		__brightness="$(decimal "$__brightness")"
-		if [ "$__brightness" -gt 255 ]; then
-			__brightness=255
-		fi
-		echo "$__brightness"
-	else
-		echo "$brightness"
+	# The value ends up in shell arithmetic, so it has to be a number
+	if ! is_uint "$__brightness"; then
+		warning "Ignoring invalid rainbow.all.brightness: $__brightness"
+		__brightness=255
 	fi
+	# This also removes the leading zeros
+	__brightness="$(decimal "$__brightness")"
+	if [ "$__brightness" -gt 255 ]; then
+		__brightness=255
+	fi
+	echo "$__brightness"
 }
 
 # Set the new brightness level

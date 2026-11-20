@@ -56,10 +56,14 @@ op_led_activity() {
 			;;
 		*)
 			# Anything else has to be something the kernel offers for this LED.
-			# What is not is left for the caller, as it can be a color.
+			# A color or the next operation is left for the caller.
 			if [ -n "$(all_supported_activities "$id" | grep -xF -e "$1")" ]; then
 				mode_args="$1"
 				shift
+			elif ! (parse_color "$1" inherit) && ! is_operation "$1"; then
+				echo "The activity is not available for '$id': $1" >&2
+				led_activity_usage "$id"
+				exit 2
 			fi
 			;;
 	esac

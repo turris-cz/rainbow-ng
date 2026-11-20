@@ -14,7 +14,7 @@ is_valid_led() {
 		fi
 		i=$((i + 1))
 	done
-	if [ "${check_led#led}" != "$check_led" ] \
+	if [ "${check_led#led}" != "$check_led" ] && is_uint "${check_led#led}" \
 		&& [ "${check_led#led}" -gt 0 ] && [ "${check_led#led}" -le "$i" ]; then
 		return 0
 	fi
@@ -30,7 +30,8 @@ canonled() {
 	local led
 	for led in $LEDS; do
 		if [ "$value" = "$led" ] || {
-			[ "${value#led}" != "$value" ] && [ "${value#led}" -eq $index ]
+			[ "${value#led}" != "$value" ] && is_uint "${value#led}" \
+				&& [ "${value#led}" -eq $index ]
 		}; then
 			echo "$led"
 			return

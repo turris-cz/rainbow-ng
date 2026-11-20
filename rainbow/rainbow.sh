@@ -93,50 +93,43 @@ if [ "$list_leds" = "y" ]; then
 	exit 0
 fi
 
-[ $# -gt 0 ] || {
+# An empty argument is what a script passes for a variable it left empty, so
+# it is skipped. With nothing else there is no operation to perform.
+has_operation="n"
+for arg in "$@"; do
+	[ -z "$arg" ] || has_operation="y"
+done
+[ "$has_operation" = "y" ] || {
 	usage
 	exit 2
 }
 
-apply_needed="n"
-while [ $# -gt 0 ]; do
-	operation="${1:-}"
-	shift
-	case "$operation" in
-		reset)
-			loadsrc reset
-			op_reset "$@"
-			shift $#
+# Check if the argument is the start of an operation. The operations use it to
+# tell an argument they do not know from the operation that follows them.
+is_operation() {
+	case "$1" in
+		reset|brightness)
+			return 0
 			;;
-		brightness)
-			loadsrc brightness
-			op_brightness "$@"
-			shift $#
-			;;
-		"")
-			usage
-			exit 2
-			;;
-		*)
-			if is_valid_led "$operation"; then
-				loadsrc led
-				op_led "$operation" "$@"
-				shift $#
-			else
-				SHIFTARGS=$#
-				type compatibility >/dev/null \
-					&& compatibility "$operation" "$@"
-				if [ "$SHIFTARGS" -lt $# ]; then
-					shift $(($# - SHIFTARGS))
-				else
-					echo "Invalid operation: $operation" >&2
-					usage
-					exit 2
-				fi
-			fi
+		binmask|intensity|get)
+			type compatibility >/dev/null 2>&1
+			return
 			;;
 	esac
-done
+	is_valid_led "$1"
+}
+
+# Print the first argument that is not empty. That is the one the main loop
+# takes for the next operation, as it skips the empty ones.
+next_argument() {
+	local arg
+	for arg in "$@"; do
+		if [ -n "$arg" ]; then
+			printf '%s\n' "$arg"
+			return
+		fi
+	done
+}
 
 ################################################################################
 # Helper function that is used in combination with parse_leds_file.
@@ -156,10 +149,60 @@ call_set_led() {
 		|| warning "Unable to configure the LED: $led"
 }
 
-loadsrc uci
-if [ "$apply_needed" = "y" ]; then
+# Apply the stored configuration to the LEDs if any operation changed it
+apply_config() {
+	[ "$apply_needed" = "y" ] || return 0
+	apply_needed="n"
+	loadsrc uci
 	base_config
-	! type preapply >/dev/null || preapply
+	! type preapply >/dev/null 2>&1 || preapply
 	call_for_leds_config call_set_led
-	! type postapply >/dev/null || postapply
-fi
+	! type postapply >/dev/null 2>&1 || postapply
+}
+
+# Every operation stores its change right away. When a later one on the same
+# command line fails, the LEDs still have to get what was stored before it, so
+# apply on any exit.
+apply_needed="n"
+trap apply_config EXIT
+
+# Every operation reports the number of arguments it did not use in SHIFTARGS.
+# Those are the following operations.
+while [ $# -gt 0 ]; do
+	operation="${1:-}"
+	shift
+	case "$operation" in
+		reset)
+			loadsrc reset
+			op_reset "$@"
+			shift $(($# - SHIFTARGS))
+			;;
+		brightness)
+			loadsrc brightness
+			op_brightness "$@"
+			shift $(($# - SHIFTARGS))
+			;;
+		"")
+			;;
+		*)
+			if is_valid_led "$operation"; then
+				loadsrc led
+				op_led "$operation" "$@"
+				shift $(($# - SHIFTARGS))
+			else
+				SHIFTARGS=$#
+				type compatibility >/dev/null 2>&1 \
+					&& compatibility "$operation" "$@"
+				if [ "$SHIFTARGS" -lt $# ]; then
+					shift $(($# - SHIFTARGS))
+				else
+					echo "Invalid operation: $operation" >&2
+					usage
+					exit 2
+				fi
+			fi
+			;;
+	esac
+done
+
+apply_config

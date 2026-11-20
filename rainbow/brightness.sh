@@ -57,27 +57,35 @@ op_brightness() {
 		brightness_usage
 		exit 2
 	}
-	brightness="$1"
+	local value="$1"
+	shift
 	# The value is used in shell arithmetic, so make sure it is a number
-	is_uint "$brightness" && brightness="$(decimal "$brightness")" || brightness=-1
+	is_uint "$value" && value="$(decimal "$value")" || value=-1
 	if [ "$precise" ]; then
-		if [ "$brightness" -lt 0 ] || [ "$brightness" -gt 255 ]; then
+		if [ "$value" -lt 0 ] || [ "$value" -gt 255 ]; then
 			echo "The value has to be a number from 0 to 255!" >&2
 			brightness_usage
 			exit 2
 		fi
 	else
-		if [ "$brightness" -lt 0 ] || [ "$brightness" -gt 8 ]; then
+		if [ "$value" -lt 0 ] || [ "$value" -gt 8 ]; then
 			echo "The value has to be a number from 0 to 8!" >&2
 			brightness_usage
 			exit 2
 		fi
-		brightness=$((brightness * 32))
+		value=$((value * 32))
 		# The highest level is the full brightness, which is 255 and not 256
-		[ "$brightness" -le 255 ] || brightness=255
+		[ "$value" -le 255 ] || value=255
 	fi
-	update_brightness "$brightness"
-	apply_needed="y"
-
 	SHIFTARGS=$#
+	# What is left has to be the next operation
+	local next
+	next="$(next_argument "$@")"
+	if [ -n "$next" ] && ! is_operation "$next"; then
+		echo "Invalid argument for brightness: $next" >&2
+		brightness_usage
+		exit 2
+	fi
+	update_brightness "$value"
+	apply_needed="y"
 }
