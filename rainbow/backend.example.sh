@@ -75,6 +75,8 @@ postapply() {
 # Perform boot sequence specific for this device.
 # This function is only optional and does not have to be defined if there is no
 # boot sequence.
+# It gets the LEDs to perform the sequence on as its arguments. Those are all
+# the LEDs except for the ones in the ignore mode.
 boot_sequence() {
 	false
 	# Note: The current state is always applied in the end in when this function

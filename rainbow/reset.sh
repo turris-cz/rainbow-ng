@@ -65,10 +65,22 @@ op_reset() {
 		_base_config_updated=""
 	fi
 
-	# Note: the boot sequence is silently ignored if there is none defined
-	[ "$bootseq" = "y" ] \
-		&& type boot_sequence >/dev/null \
-		&& boot_sequence
-
+	# This comes before the boot sequence, so that the configuration is
+	# applied even when the sequence does not get to its end.
 	apply_needed="y"
+
+	# Note: the boot sequence is silently ignored if there is none defined
+	if [ "$bootseq" = "y" ] && type boot_sequence >/dev/null 2>&1; then
+		# The LEDs that are to be ignored are not ours to play with. That
+		# includes the ones with a trigger in the system config we can't
+		# set up, which would otherwise stay in the last color of the
+		# sequence.
+		loadsrc uci
+		base_config
+		_boot_led() {
+			[ "$mode" = "ignore" ] || echo "$led" >&3
+		}
+		# shellcheck disable=SC2046
+		boot_sequence $(call_for_leds_config _boot_led 3>&1)
+	fi
 }

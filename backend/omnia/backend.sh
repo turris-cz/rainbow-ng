@@ -132,10 +132,11 @@ postapply() {
 }
 
 
+# The arguments are the LEDs to perform the sequence on
 boot_sequence() {
-	local sysfs
+	local sysfs led
 
-	for led in $LEDS; do
+	for led in "$@"; do
 		sysfs="$(led2sysfs "$led")"
 		[ -d "$sysfs" ] || continue
 		echo "none" > "$sysfs/trigger"
@@ -144,7 +145,7 @@ boot_sequence() {
 	done
 	sleep 1
 
-	for led in $LEDS; do
+	for led in "$@"; do
 		sysfs="$(led2sysfs "$led")"
 		[ -d "$sysfs" ] || continue
 		echo "none" > "$sysfs/trigger"
