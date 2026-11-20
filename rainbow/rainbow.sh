@@ -151,7 +151,9 @@ call_set_led() {
 	done <<-EOF
 		$(echo "$mode_args" | tr '\t' '\n')
 	EOF
-	set_led "$@"
+	# An LED that can't be configured must not stop the remaining ones
+	set_led "$@" \
+		|| warning "Unable to configure the LED: $led"
 }
 
 loadsrc uci

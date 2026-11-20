@@ -48,13 +48,15 @@ preapply() {
 	if [ $brightness_level = 8 ]; then
 		brightness_level=7
 	fi
-	echo 0 2 4 8 16 32 64 255 > $SYSFS/brightness_values
-	echo $brightness_level > $SYSFS/brightness_level
+	sysfs_write "0 2 4 8 16 32 64 255" "$SYSFS/brightness_values"
+	sysfs_write "$brightness_level" "$SYSFS/brightness_level"
 }
 
 set_led() {
 	local led="$1" r="$2" g="$3" b="$4" mode="$5"
 	shift 5
+	# Nothing to do for an LED the kernel does not provide
+	[ -d "$(led2sysfs "$led")" ] || return 0
 
 	if [ "$mode" = "auto" ]; then # override auto mode for some
 		case "$led" in
@@ -104,9 +106,9 @@ set_led() {
 	echo "$r $g $b" > "$sysfs/multi_intensity"
 	if [ "$trigger" = "activity" ]; then
 		apply_activity "$led" "$@" \
-			|| echo "Warning: activity setup failed for: $led" >&2
-	else
-		echo "$trigger" > "$sysfs/trigger"
+			|| warning "activity setup failed for: $led"
+	elif ! echo "$trigger" 2>/dev/null >"$sysfs/trigger"; then
+		warning "The trigger '$trigger' is not available for: $led"
 	fi
 }
 
@@ -121,6 +123,7 @@ boot_sequence() {
 
 	for led in $LEDS; do
 		sysfs="$(led2sysfs "$led")"
+		[ -d "$sysfs" ] || continue
 		echo "none" > "$sysfs/trigger"
 		echo "1" > "$sysfs/brightness"
 		echo "0 255 0" > "$sysfs/multi_intensity"
@@ -129,6 +132,7 @@ boot_sequence() {
 
 	for led in $LEDS; do
 		sysfs="$(led2sysfs "$led")"
+		[ -d "$sysfs" ] || continue
 		echo "none" > "$sysfs/trigger"
 		echo "1" > "$sysfs/brightness"
 		echo "0 0 255" > "$sysfs/multi_intensity"

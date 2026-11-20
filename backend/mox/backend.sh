@@ -30,6 +30,8 @@ set_led() {
 	local led="$1" r="$2" g="$3" b="$4" mode="$5"
 	shift 5
 	[ "$led" = "activity" ] || return
+	# Nothing to do when the kernel does not provide the LED
+	[ -d "$SYSFS" ] || return 0
 
 	if [ "$mode" = "auto" ]; then # override auto mode
 		mode="activity"
@@ -64,7 +66,7 @@ set_led() {
 	echo "$brightness" > "$SYSFS/brightness"
 	if [ "$trigger" = "activity" ]; then
 		apply_activity "$led" $mode_args "$@" \
-			|| echo "Warning: activity setup failed for: $led" >&2
+			|| warning "activity setup failed for: $led"
 	else
 		echo "$trigger" > "$SYSFS/trigger"
 	fi

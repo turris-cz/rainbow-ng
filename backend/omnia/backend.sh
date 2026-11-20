@@ -49,12 +49,14 @@ preapply() {
 	brightness_level="$(brightness)"
 	# The full range is only 0-100 but that is good enough so we don't adjust
 	# more. We just loose the precision on Omnia but who can see it anyway.
-	echo "$(((brightness_level * 100 + 127) / 255))" > "$SYSFS/brightness"
+	sysfs_write "$(((brightness_level * 100 + 127) / 255))" "$SYSFS/brightness"
 }
 
 set_led() {
 	local led="$1" r="$2" g="$3" b="$4" mode="$5"
 	shift 5
+	# Nothing to do for an LED the kernel does not provide
+	[ -d "$(led2sysfs "$led")" ] || return 0
 
 	if [ "$mode" = "auto" ]; then # override auto mode for some
 		case "$led" in 
@@ -109,9 +111,9 @@ set_led() {
 	echo "$r $g $b" > "$sysfs/multi_intensity"
 	if [ "$trigger" = "activity" ]; then
 		apply_activity "$led" "$@" \
-			|| echo "Warning: activity setup failed for: $led" >&2
-	else
-		echo "$trigger" > "$sysfs/trigger"
+			|| warning "activity setup failed for: $led"
+	elif ! echo "$trigger" 2>/dev/null >"$sysfs/trigger"; then
+		warning "The trigger '$trigger' is not available for: $led"
 	fi
 }
 
@@ -127,6 +129,7 @@ boot_sequence() {
 
 	for led in $LEDS; do
 		sysfs="$(led2sysfs "$led")"
+		[ -d "$sysfs" ] || continue
 		echo "none" > "$sysfs/trigger"
 		echo "1" > "$sysfs/brightness"
 		echo "0 255 0" > "$sysfs/multi_intensity"
@@ -135,6 +138,7 @@ boot_sequence() {
 
 	for led in $LEDS; do
 		sysfs="$(led2sysfs "$led")"
+		[ -d "$sysfs" ] || continue
 		echo "none" > "$sysfs/trigger"
 		echo "1" > "$sysfs/brightness"
 		echo "0 0 255" > "$sysfs/multi_intensity"

@@ -11,17 +11,34 @@ class Backend:
     LEDS = ["power", "lan-0", "lan-1", "lan-2", "lan-3", "lan-4", "wan", "wlan-1", "wlan-2", "wlan-3", "indicator-1", "indicator-2"]
 
     def __init__(self):
-        self._fds = tuple(os.open(f"/sys/class/leds/rgb:{led}/multi_intensity", os.O_WRONLY) for led in self.LEDS)
+        # The LEDs are opened when they are asked for, as the kernel does not
+        # have to provide all of them and can add one later
+        self._fds = [None] * len(self.LEDS)
 
     def update(self, ledid: int, red: int, green: int, blue: int) -> None:
         """Update color of led on given index."""
-        os.write(self._fds[ledid], f"{red} {green} {blue}".encode())
+        if not self.handled(ledid):
+            return
+        try:
+            os.write(self._fds[ledid], f"{red} {green} {blue}".encode())
+        except OSError:
+            # The LED is gone. It is opened again once the kernel has it back.
+            os.close(self._fds[ledid])
+            self._fds[ledid] = None
 
     def apply(self) -> None:
         """Apply previous LEDs state updates if that is required."""
         # We apply immediately so we do not need this.
 
-    @staticmethod
-    def handled(ledid: int) -> bool:
+    def handled(self, ledid: int) -> bool:
         """Informs animator if given led animation should be handled by it."""
-        return True  # On Omnia all leds could be animated using animator
+        # On Omnia all leds could be animated using animator, unless the kernel does not
+        # provide the LED
+        if ledid >= len(self._fds):
+            return False
+        if self._fds[ledid] is None:
+            try:
+                self._fds[ledid] = os.open(f"/sys/class/leds/rgb:{self.LEDS[ledid]}/multi_intensity", os.O_WRONLY)
+            except OSError:
+                return False
+        return True

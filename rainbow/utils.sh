@@ -39,6 +39,14 @@ decimal() {
 	echo "${value:-0}"
 }
 
+# Write the value to a file in sysfs. A file that does not exist is skipped,
+# so that rainbow can do the rest of its work with a kernel that does not
+# provide it.
+sysfs_write() {
+	[ -e "$2" ] || return 0
+	echo "$1" >"$2"
+}
+
 # This function should be used to load any other source files that are part of
 # rainbow except of this one.
 srcdir="$(dirname "$(readlink -f "$0")")"
