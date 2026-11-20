@@ -67,14 +67,18 @@ set_led() {
 
 	# We have to disable trigger first to make sure that changes are correctly
 	# applied and not modified by this in the meantime.
-	echo "none" > "$SYSFS/trigger"
-	echo "$brightness" > "$SYSFS/brightness"
+	# This function is called with errexit off, so collect the failures to
+	# report them to the caller.
+	local ret=0
+	echo "none" > "$SYSFS/trigger" || ret=1
+	echo "$brightness" > "$SYSFS/brightness" || ret=1
 	if [ "$trigger" = "activity" ]; then
 		apply_activity "$led" "$@" \
 			|| warning "activity setup failed for: $led"
 	else
-		echo "$trigger" > "$SYSFS/trigger"
+		echo "$trigger" > "$SYSFS/trigger" || ret=1
 	fi
+	return $ret
 }
 
 postapply() {

@@ -126,15 +126,23 @@ set_led() {
 
 	# We have to disable trigger first to make sure that changes are correctly
 	# applied and not modified by this in the meantime.
-	echo "none" > "$sysfs/trigger"
-	echo "$brightness" > "$sysfs/brightness"
-	echo "$r $g $b" > "$sysfs/multi_intensity"
+	# This function is called with errexit off, so collect the failures to
+	# report them to the caller.
+	local ret=0
+	echo "none" > "$sysfs/trigger" || ret=1
+	echo "$brightness" > "$sysfs/brightness" || ret=1
+	echo "$r $g $b" > "$sysfs/multi_intensity" || ret=1
 	if [ "$trigger" = "activity" ]; then
-		apply_activity "$led" "$@" \
-			|| warning "activity setup failed for: $led"
+		if ! apply_activity "$led" "$@"; then
+			warning "activity setup failed for: $led"
+			# Without the trigger the LED would just stay lit, which is
+			# what the enable mode looks like.
+			echo 0 > "$sysfs/brightness" || ret=1
+		fi
 	elif ! echo "$trigger" 2>/dev/null >"$sysfs/trigger"; then
 		warning "The trigger '$trigger' is not available for: $led"
 	fi
+	return $ret
 }
 
 postapply() {
