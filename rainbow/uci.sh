@@ -101,7 +101,8 @@ base_config() {
 			_functions_list "$@"
 		}
 
-		config_load rainbow
+		config_load rainbow \
+			|| warning "Unable to load the UCI config: rainbow"
 		# The section for all the LEDs is the same for every one of them, so
 		# read it once. A dash stands for what it does not set.
 		color_r="-" color_g="-" color_b="-" mode="-" mode_args=""
@@ -113,7 +114,8 @@ base_config() {
 			echo "$color_r	$color_g	$color_b	$mode${mode_args:+	}$mode_args"
 		done >"$rainbowdir/000-base"
 
-		config_load system
+		config_load system \
+			|| warning "Unable to load the UCI config: system"
 		for led in $LEDS; do
 			color_r="-" color_g="-" color_b="-" mode="-" mode_args=""
 			sysfs="$(led2sysfs "$led")"; sysfs="${sysfs##*/}"
