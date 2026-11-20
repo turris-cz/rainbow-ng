@@ -17,8 +17,8 @@ led2sysfs() {
 	false
 }
 
-# Allows modification of defaults for specific leds (it is called with 'all' as
-# well).
+# Allows modification of defaults for specific leds. What is set in the UCI
+# section for all the LEDs and in the section of the LED overrides them.
 # It is called in environment where following variables are defined and
 # available for modification:
 # color_r: red color

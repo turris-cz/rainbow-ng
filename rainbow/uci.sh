@@ -102,11 +102,12 @@ base_config() {
 		}
 
 		config_load rainbow
-		default_r=255 default_g=255 default_b=255
-		default_mode="auto" default_mode_args=""
-		_uci_rainbow_section "all"
-		default_r="$color_r" default_g="$color_g" default_b="$color_b"
-		default_mode="$mode" default_mode_args="$mode_args"
+		# The section for all the LEDs is the same for every one of them, so
+		# read it once. A dash stands for what it does not set.
+		color_r="-" color_g="-" color_b="-" mode="-" mode_args=""
+		_uci_rainbow_options "all"
+		all_r="$color_r" all_g="$color_g" all_b="$color_b"
+		all_mode="$mode" all_mode_args="$mode_args"
 		for led in $LEDS; do
 			_uci_rainbow_section "$(echo "$led" | sed 's|-|_|')"
 			echo "$color_r	$color_g	$color_b	$mode${mode_args:+	}$mode_args"
@@ -124,11 +125,27 @@ base_config() {
 }
 
 # Parse given led setting from UCI
+# The defaults of the board are overridden by what is set for all the LEDs and
+# that by what is set for the given one.
 _uci_rainbow_section() {
 	local led="$1"
-	color_r="$default_r" color_g="$default_g" color_b="$default_b"
-	mode="$default_mode" mode_args="$default_mode_args"
-	! type led_defaults >/dev/null || led_defaults "$led"
+	color_r=255 color_g=255 color_b=255
+	mode="auto" mode_args=""
+	! type led_defaults >/dev/null 2>&1 || led_defaults "$led"
+	[ "$all_r" = "-" ] || color_r="$all_r"
+	[ "$all_g" = "-" ] || color_g="$all_g"
+	[ "$all_b" = "-" ] || color_b="$all_b"
+	if [ "$all_mode" != "-" ]; then
+		mode="$all_mode"
+		mode_args="$all_mode_args"
+	fi
+	_uci_rainbow_options "$led"
+}
+
+# Apply the options of one section of the rainbow config
+_uci_rainbow_options() {
+	local led="$1"
+	local rawcolor rawmode trigger
 
 	config_get rawcolor "$led" "color" ""
 	parse_color "$rawcolor" \
