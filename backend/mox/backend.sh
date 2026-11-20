@@ -35,7 +35,7 @@ set_led() {
 
 	if [ "$mode" = "auto" ]; then # override auto mode
 		mode="activity"
-		mode_args="heartbeat"
+		set "heartbeat"
 	fi
 	local global_brightness
 	global_brightness="$(brightness)"
@@ -50,6 +50,11 @@ set_led() {
 		activity)
 			brightness=0
 			trigger="activity"
+			# The trigger switches the LED on its own, so the only way to
+			# honor zero brightness is not to use it.
+			if [ "$global_brightness" -eq 0 ] || [ "$r" -eq 0 ]; then
+				trigger="none"
+			fi
 			;;
 		animate)
 			# For animation we we rely on animator
@@ -65,7 +70,7 @@ set_led() {
 	echo "none" > "$SYSFS/trigger"
 	echo "$brightness" > "$SYSFS/brightness"
 	if [ "$trigger" = "activity" ]; then
-		apply_activity "$led" $mode_args "$@" \
+		apply_activity "$led" "$@" \
 			|| warning "activity setup failed for: $led"
 	else
 		echo "$trigger" > "$SYSFS/trigger"
