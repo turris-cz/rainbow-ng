@@ -141,19 +141,22 @@ op_led() {
 
 	id="$(canonled "$id")"
 
+	# The standard output of the function is not available where it is called
+	# from, so the configuration is printed to the descriptor 3, which is our
+	# standard output.
 	config() {
 		if [ "$id" = "all" ] || [ "$led" = "$id" ]; then
 			printf "%s\t%s\t%s\t%s\n" "$color_r" "$color_g" "$color_b" \
-				"$mode${mode_args:+	}$mode_args" >&2
+				"$mode${mode_args:+	}$mode_args" >&3
 		fi
 	}
 	if [ -z "$mode" ] && [ -z "$color_r" ] && [ -z "$color_g" ] && [ -z "$color_b" ]; then
 		if [ "$localconf" = "y" ]; then
-			call_for_leds_config_level "$priority" "$slot" config
+			call_for_leds_config_level "$priority" "$slot" config 3>&1
 		else
 			loadsrc uci
 			base_config
-			call_for_leds_config config
+			call_for_leds_config config 3>&1
 		fi
 		return
 	fi
