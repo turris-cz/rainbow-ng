@@ -143,7 +143,7 @@ _uci_rainbow_section() {
 	elif [ "$mode" = "animate" ]; then
 		local animation animation_color_r animation_color_g animation_color_b
 		animation_init
-		config_list_foreach "$led" "$animation" _for_uci_animation
+		config_list_foreach "$led" "animation" _for_uci_animation
 		animation_finish
 		mode_args="$animation"
 	fi
