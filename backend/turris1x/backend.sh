@@ -47,6 +47,16 @@ get_brightness_raw() {
 	cat "$SYSFS/brightness_level"
 }
 
+# Convert the brightness in the 0-255 range to what is written to the
+# hardware, which is the level. We only have 8 of them with indexes 0-7.
+brightness_to_raw() {
+	local level="$(($1 / 32))"
+	if [ "$level" -gt 7 ]; then
+		level=7
+	fi
+	echo "$level"
+}
+
 # Set the brightness each of the eight levels stands for
 set_brightness_levels() {
 	if [ -e "$SYSFS/brightness_values" ]; then
@@ -67,14 +77,8 @@ preapply() {
 		/etc/init.d/rainbow-animator pause
 	fi
 
-	local brightness_level
-	brightness_level="$(($(brightness) / 32))"
-	# we only have 8 indexes - 0-7
-	if [ "$brightness_level" -gt 7 ]; then
-		brightness_level=7
-	fi
 	set_brightness_levels 0 2 4 8 16 32 64 255
-	sysfs_write "$brightness_level" "$SYSFS/brightness_level"
+	sysfs_write "$(brightness_to_raw "$(brightness)")" "$SYSFS/brightness_level"
 }
 
 set_led() {

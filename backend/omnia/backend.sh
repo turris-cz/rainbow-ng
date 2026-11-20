@@ -40,16 +40,19 @@ get_brightness() {
 	echo $(((cur * 255 + 50) / 100))
 }
 
+# Convert the brightness in the 0-255 range to what is written to the hardware
+# The full range is only 0-100 but that is good enough so we don't adjust more.
+# We just loose the precision on Omnia but who can see it anyway.
+brightness_to_raw() {
+	echo "$((($1 * 100 + 127) / 255))"
+}
+
 preapply() {
 	if [ -x /etc/init.d/rainbow-animator ]; then
 		/etc/init.d/rainbow-animator pause
 	fi
 
-	local brightness_level
-	brightness_level="$(brightness)"
-	# The full range is only 0-100 but that is good enough so we don't adjust
-	# more. We just loose the precision on Omnia but who can see it anyway.
-	sysfs_write "$(((brightness_level * 100 + 127) / 255))" "$SYSFS/brightness"
+	sysfs_write "$(brightness_to_raw "$(brightness)")" "$SYSFS/brightness"
 }
 
 set_led() {

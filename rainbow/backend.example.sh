@@ -48,6 +48,14 @@ get_brightness_raw() {
 }
 
 
+# This function is optional and is used by button_sync.sh together with
+# get_brightness_raw. It converts the brightness in the 0-255 range to the value
+# the hardware reports in get_brightness_raw. With both functions the button
+# sync can tell a change made by the button from the one rainbow made itself.
+brightness_to_raw() {
+	false
+}
+
 # The optional function that is called before application of state using
 # set_led. This should be used to prepare environment as well as to pause
 # animator for example.
