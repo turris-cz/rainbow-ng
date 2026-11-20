@@ -59,6 +59,7 @@ led_help() {
 op_led() {
 	local id="$1"; shift
 	local localconf="n"
+	local OPTIND=1
 	while getopts "lh" opt; do
 		case "$opt" in
 			l)

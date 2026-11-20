@@ -21,6 +21,7 @@ op_reset() {
 	local nowipe="n"
 	local all="n"
 	local bootseq="n"
+	local OPTIND=1
 	while getopts "nabh" opt; do
 		case "$opt" in
 			n)

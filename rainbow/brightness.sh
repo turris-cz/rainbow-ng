@@ -26,6 +26,7 @@ brightness_help() {
 op_brightness() {
 	local query=
 	local precise=
+	local OPTIND=1
 	while getopts "qph" opt; do
 		case "$opt" in
 			q)

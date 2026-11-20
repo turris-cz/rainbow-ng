@@ -22,6 +22,7 @@ led_animate_help() {
 
 op_led_animate() {
 	local id="$1"; shift
+	local OPTIND=1
 	while getopts "h" opt; do
 		case "$opt" in
 			h)

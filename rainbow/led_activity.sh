@@ -18,6 +18,7 @@ led_activity_help() {
 op_led_activity() {
 	local id="$1"; shift
 	local list="n"
+	local OPTIND=1
 	while getopts "t:lih" opt; do
 		case "$opt" in
 			l)
