@@ -40,6 +40,25 @@ get_brightness() {
 	echo $(((cur * 255 + 50) / 100))
 }
 
+# The brightness in the 0-255 range for the levels of "rainbow brightness".
+# The levels are the steps the button on the router goes through, which are
+# 0, 1, 5, 12, 25, 40, 70 and 100 percent, so that both ways of setting the
+# brightness give the same result. Level 8 is the same as level 7.
+brightness_level() {
+	local percent
+	case "$1" in
+		0) percent=0 ;;
+		1) percent=1 ;;
+		2) percent=5 ;;
+		3) percent=12 ;;
+		4) percent=25 ;;
+		5) percent=40 ;;
+		6) percent=70 ;;
+		*) percent=100 ;;
+	esac
+	echo "$(((percent * 255 + 50) / 100))"
+}
+
 # Convert the brightness in the 0-255 range to what is written to the hardware
 # The full range is only 0-100 but that is good enough so we don't adjust more.
 # We just loose the precision on Omnia but who can see it anyway.

@@ -48,6 +48,14 @@ get_brightness_raw() {
 }
 
 
+# This function is optional. It gets one of the levels 0-8 that the brightness
+# operation takes and echoes the brightness in the 0-255 range it stands for.
+# Without it the levels are spread evenly.
+brightness_level() {
+	local level="$1"
+	false
+}
+
 # This function is optional and is used by button_sync.sh together with
 # get_brightness_raw. It converts the brightness in the 0-255 range to the value
 # the hardware reports in get_brightness_raw. With both functions the button
