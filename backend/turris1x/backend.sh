@@ -31,10 +31,35 @@ led_defaults() {
 	esac
 }
 
+# The button on the router steps through the brightness levels. Report the one
+# in use in the 0-255 range, with the same steps preapply uses the other way.
 get_brightness() {
-	local cur
-	cur="$(cat "$SYSFS/brightness")"
-	echo $cur
+	local level
+	level="$(get_brightness_raw)"
+	if [ "$level" -ge 7 ]; then
+		echo 255
+	else
+		echo "$((level * 32))"
+	fi
+}
+
+get_brightness_raw() {
+	cat "$SYSFS/brightness_level"
+}
+
+# Set the brightness each of the eight levels stands for
+set_brightness_levels() {
+	if [ -e "$SYSFS/brightness_values" ]; then
+		# Driver in Turris OS
+		echo "$*" >"$SYSFS/brightness_values"
+	elif [ -d "$SYSFS/brightness_levels" ]; then
+		# Driver in OpenWrt, one file per level
+		local level=0 value
+		for value in "$@"; do
+			sysfs_write "$value" "$SYSFS/brightness_levels/$level"
+			level=$((level + 1))
+		done
+	fi
 }
 
 preapply() {
@@ -44,11 +69,11 @@ preapply() {
 
 	local brightness_level
 	brightness_level="$(($(brightness) / 32))"
-	# we only have 8 indexes - 0-7, but $brightness_level is 0-8
-	if [ $brightness_level = 8 ]; then
+	# we only have 8 indexes - 0-7
+	if [ "$brightness_level" -gt 7 ]; then
 		brightness_level=7
 	fi
-	sysfs_write "0 2 4 8 16 32 64 255" "$SYSFS/brightness_values"
+	set_brightness_levels 0 2 4 8 16 32 64 255
 	sysfs_write "$brightness_level" "$SYSFS/brightness_level"
 }
 
@@ -76,7 +101,9 @@ set_led() {
 		esac
 	fi
 
-	local brightness=1 trigger="none"
+	local sysfs brightness trigger="none"
+	sysfs="$(led2sysfs "$led")"
+	brightness="$(cat "$sysfs/max_brightness")"
 	case "$mode" in
 		auto)
 			trigger="turris1x-cpld"
@@ -97,8 +124,6 @@ set_led() {
 			;;
 	esac
 
-	local sysfs
-	sysfs="$(led2sysfs "$led")"
 	# We have to disable trigger first to make sure that changes are correctly
 	# applied and not modified by this in the meantime.
 	echo "none" > "$sysfs/trigger"
