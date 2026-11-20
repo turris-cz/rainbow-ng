@@ -131,7 +131,7 @@ boot_sequence() {
 		sysfs="$(led2sysfs "$led")"
 		[ -d "$sysfs" ] || continue
 		echo "none" > "$sysfs/trigger"
-		echo "1" > "$sysfs/brightness"
+		cat "$sysfs/max_brightness" > "$sysfs/brightness"
 		echo "0 255 0" > "$sysfs/multi_intensity"
 	done
 	sleep 1
@@ -140,7 +140,7 @@ boot_sequence() {
 		sysfs="$(led2sysfs "$led")"
 		[ -d "$sysfs" ] || continue
 		echo "none" > "$sysfs/trigger"
-		echo "1" > "$sysfs/brightness"
+		cat "$sysfs/max_brightness" > "$sysfs/brightness"
 		echo "0 0 255" > "$sysfs/multi_intensity"
 	done
 	sleep 1
