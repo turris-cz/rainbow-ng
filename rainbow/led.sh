@@ -27,7 +27,10 @@ led_help() {
 		  value if you left some out (such as ,255, or G255) or with default
 		  '-'. The '-' is the special value that specifies inheritance from
 		  lower priority configuration. You can use it as replacement for any
-		  color compound or alone to set inheritance.
+		  color compound or alone to set inheritance. A color that starts
+		  with it and continues, such as -,-,255, is taken for options when
+		  it comes right after the name of the LED or of the activity and
+		  animate modes. Put '--' in front of it there.
 		Mode:
 		  auto
 		    Operate led status as designed (that is for example ethernet activity for lan leds)
