@@ -20,6 +20,25 @@ internal_error() {
 	exit 3
 }
 
+# Check that the value is a non-negative decimal integer of a sane length.
+# The shell evaluates variables used in arithmetic recursively, including
+# command substitutions in array subscripts. Nothing that comes from the
+# command line or from UCI may reach $(( )) before it passed this check.
+is_uint() {
+	case "${1:-}" in
+		""|*[!0-9]*) return 1 ;;
+	esac
+	[ "${#1}" -le 9 ]
+}
+
+# Print the decimal number without its leading zeros. The shell would read it
+# as an octal number with them. The 10# prefix that does the same in bash is
+# not available in the shell of busybox, which runs button_sync.sh.
+decimal() {
+	local value="${1#"${1%%[!0]*}"}"
+	echo "${value:-0}"
+}
+
 # This function should be used to load any other source files that are part of
 # rainbow except of this one.
 srcdir="$(dirname "$(readlink -f "$0")")"

@@ -55,6 +55,8 @@ op_brightness() {
 		exit 2
 	}
 	brightness="$1"
+	# The value is used in shell arithmetic, so make sure it is a number
+	is_uint "$brightness" && brightness="$(decimal "$brightness")" || brightness=-1
 	if [ "$precise" ]; then
 		if [ "$brightness" -lt 0 ] || [ "$brightness" -gt 255 ]; then
 			echo "The value has to be a number from 0 to 255!" >&2

@@ -8,13 +8,14 @@ brightness() {
 	if [ "${1:-}" = "fetch" ] || [ -z "${brightness:-}" ]; then
 		__brightness="$(uci -q get "rainbow.all.brightness" || echo 255)"
 
-		# remove leading zeros
-		__brightness="$(echo "$__brightness" | sed 's/^[0]*//')"
-		if [ -z "$__brightness" ]; then
-			__brightness=0
+		# The value ends up in shell arithmetic, so it has to be a number
+		if ! is_uint "$__brightness"; then
+			warning "Ignoring invalid rainbow.all.brightness: $__brightness"
+			__brightness=255
 		fi
-
-		if [ "$__brightness" -lt 0 ] || [ "$__brightness" -gt 255 ]; then
+		# This also removes the leading zeros
+		__brightness="$(decimal "$__brightness")"
+		if [ "$__brightness" -gt 255 ]; then
 			__brightness=255
 		fi
 		echo "$__brightness"
@@ -43,6 +44,61 @@ base_config() {
 	(
 		set +u # functions.sh does not support unset variables being error
 		. /lib/functions.sh
+
+		# functions.sh counts the sections and the items of a list with shell
+		# arithmetic on variables that a section, an option or a list of the
+		# right name can preset, for example foo_LENGTH for the list foo. The
+		# shell of busybox it is written for only fails on a value that is not
+		# a number, but bash evaluates it as an expression. Let nothing but
+		# the counting in functions.sh itself write those variables. An
+		# option or a list named that way is dropped. The same goes for
+		# LIST_STATE, as config_load passes every word of it to export and
+		# that can set the counters as well.
+		eval "_functions_$(declare -f config)"
+		eval "_functions_$(declare -f config_set)"
+		eval "_functions_$(declare -f append)"
+		eval "_functions_$(declare -f list)"
+		_functions_counting=""
+		config_set() {
+			case "${1}_${2}" in
+				LIST_STATE)
+					return 0
+					;;
+				NUM_SECTIONS|*_LENGTH)
+					[ "$_functions_counting" = "y" ] || return 0
+					;;
+			esac
+			_functions_config_set "$@"
+		}
+		append() {
+			case "$1" in
+				CONFIG_NUM_SECTIONS|CONFIG_*_LENGTH)
+					return 0
+					;;
+				CONFIG_LIST_STATE)
+					# list() adds the name of a variable here
+					case "$2" in
+						""|*[!A-Za-z0-9_]*)
+							return 0
+							;;
+					esac
+					;;
+			esac
+			_functions_append "$@"
+		}
+		# The counters can still come from somewhere else, such as the
+		# environment, so make sure that they are numbers right before
+		# functions.sh uses them.
+		config() {
+			is_uint "${CONFIG_NUM_SECTIONS:-0}" || CONFIG_NUM_SECTIONS=0
+			_functions_config "$@"
+		}
+		list() {
+			local _functions_counting="y" len
+			config_get len "$CONFIG_SECTION" "${1}_LENGTH" 0
+			is_uint "$len" || config_set "$CONFIG_SECTION" "${1}_LENGTH" 0
+			_functions_list "$@"
+		}
 
 		config_load rainbow
 		default_r=255 default_g=255 default_b=255

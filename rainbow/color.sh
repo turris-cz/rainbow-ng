@@ -14,15 +14,27 @@ parse_color() {
 _parse_value() {
 	local value="$1"
 	local mode="$2"
-	[ "${value#x}" == "$value" ] \
-		|| value="$((16#${value#x}))"
+	case "$value" in
+		x*)
+			# Only hexadecimal digits may reach the arithmetic expansion
+			value="${value#x}"
+			case "$value" in
+				""|*[!0-9a-fA-F]*) return 1 ;;
+			esac
+			[ "${#value}" -le 8 ] || return 1
+			value="$((16#$value))"
+			;;
+	esac
 
 	if [ "$mode" = "inherit" ] && [ "$value" = "-" ]; then
 		true
 	elif [ -n "$value" ]; then
-		echo "$value" | grep -qE "^[0-9]*$" || return
-		[ "$value" -ge 0 ] || return
-		[ "$value" -le 255 ] || return
+		case "$value" in
+			*[!0-9]*) return 1 ;;
+		esac
+		[ "${#value}" -le 9 ] || return 1
+		value="$(decimal "$value")"
+		[ "$value" -le 255 ] || return 1
 	fi
 
 	echo "$value"
@@ -35,6 +47,12 @@ _parse_color() {
 	if [ -z "$value" ]; then
 		return # Empty value means no modification
 	fi
+
+	# No valid color uses any other character. The checks below work line by
+	# line, so a value that spans several lines must not get to them.
+	case "$value" in
+		*[!0-9a-zA-Z,-]*) return 1 ;;
+	esac
 
 	case "$value" in
 		-)

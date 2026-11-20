@@ -48,11 +48,12 @@ list_leds="n"
 while getopts "p:n:lxh" opt; do
 	case "$opt" in
 		p)
-			if [ "$OPTARG" -ge 0 ] && [ "$OPTARG" -le 100 ]; then
-				priority="$OPTARG"
+			if is_uint "$OPTARG" && [ "$(decimal "$OPTARG")" -le 100 ]; then
+				priority="$(decimal "$OPTARG")"
 			else
 				echo "Priority is not in the range from 0 to 100: $OPTARG" >&2
 				usage
+				exit 2
 			fi
 			;;
 		n)

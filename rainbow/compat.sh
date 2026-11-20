@@ -18,8 +18,27 @@ compat_binmask() {
 
 	local binmask="$1"
 	shift
-	[ "${binmask#0x}" == "$binmask" ] \
-		|| binmask="$((16#${binmask#0x}))"
+	# The mask is used in shell arithmetic, so make sure it is a number
+	case "$binmask" in
+		0x*|0X*)
+			binmask="${binmask#0[xX]}"
+			case "$binmask" in
+				""|*[!0-9a-fA-F]*) binmask="" ;;
+			esac
+			[ "${#binmask}" -le 8 ] && [ -n "$binmask" ] \
+				&& binmask="$((16#$binmask))" \
+				|| binmask=""
+			;;
+		*)
+			is_uint "$binmask" \
+				&& binmask="$(decimal "$binmask")" \
+				|| binmask=""
+			;;
+	esac
+	if [ -z "$binmask" ]; then
+		echo "Invalid binmask usage. The mask has to be a number." >&2
+		exit 2
+	fi
 
 	local mask=1
 	for led in $LEDS; do
@@ -42,8 +61,16 @@ compat_binmask() {
 compat_intensity() {
 	local max="$1"; shift
 	if [ $# -gt 0 ]; then
+		# The value is used in shell arithmetic, so make sure it is a number
+		if ! is_uint "$1"; then
+			echo "Invalid intensity usage. The value has to be a number from 0 to $max." >&2
+			exit 2
+		fi
+		local intensity
+		intensity="$(decimal "$1")"
+		[ "$intensity" -le "$max" ] || intensity="$max"
 		loadsrc uci
-		update_brightness "$(($1 * 255 / max))"
+		update_brightness "$((intensity * 255 / max))"
 		apply_needed="y"
 		shift
 	else
