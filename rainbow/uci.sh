@@ -134,7 +134,10 @@ _uci_rainbow_section() {
 	parse_color "$rawcolor" \
 		|| warning "Ignoring invalid color '$rawcolor' in: rainbow.$led"
 
-	config_get rawmode "$led" "state" "" # backward compatibility
+	# The status is the name of this option in the rainbow of Turris OS 5 and
+	# older. It is still what luci-app-rainbow and the migrated configs use.
+	config_get rawmode "$led" "status" ""
+	config_get rawmode "$led" "state" "$rawmode" # backward compatibility
 	config_get rawmode "$led" "mode" "$rawmode"
 	[ -n "$rawmode" ] || return 0
 	case "$rawmode" in
