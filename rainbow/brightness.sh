@@ -17,7 +17,8 @@ brightness_help() {
 		if -p is used).
 
 		Options:
-		  -q  Query for current setting instead of setting brightness
+		  -q  Query for current setting instead of setting brightness (the
+		      value is always printed in the range from 0 to 255)
 		  -p  Higher precission for brightness
 		  -h  Print this help text and exit
 	EOF
@@ -45,12 +46,13 @@ op_brightness() {
 				;;
 		esac
 	done
+	shift $((OPTIND - 1))
 	if [ "$query" ]; then
 		brightness fetch
-		return $#
+		SHIFTARGS=$#
+		return 0
 	fi
 
-	shift $((OPTIND - 1))
 	[ $# -gt 0 ] || {
 		brightness_usage
 		exit 2
@@ -71,6 +73,8 @@ op_brightness() {
 			exit 2
 		fi
 		brightness=$((brightness * 32))
+		# The highest level is the full brightness, which is 255 and not 256
+		[ "$brightness" -le 255 ] || brightness=255
 	fi
 	update_brightness "$brightness"
 	apply_needed="y"
