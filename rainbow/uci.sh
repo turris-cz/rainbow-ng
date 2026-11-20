@@ -3,6 +3,8 @@
 
 # UCI configuration helper functions
 
+loadsrc led_activity
+
 # Currently configured brightness level
 brightness() { 
 	if [ "${1:-}" = "fetch" ] || [ -z "${brightness:-}" ]; then
@@ -186,14 +188,15 @@ _uci_system_section() {
 				[ "$default" != "1" ] \
 					|| mode="enable"
 				;;
-			time)
+			timer)
 				local on off
 				config_get on "$section" "delayon"
 				config_get off "$section" "delayoff"
-				if [ -n "$on" ] && [ -n "$off" ]; then
-					mode="animate"
-					mode_args="black	$off	black	0	-	$on	-	0"
-				fi
+				mode="activity"
+				# A dash stands for the time that is not set
+				is_uint "$on" || on="-"
+				is_uint "$off" || off="-"
+				mode_args="timer	$on	$off"
 				;;
 			default-on)
 				mode="enable"
@@ -207,17 +210,28 @@ _uci_system_section() {
 				fi
 				;;
 			netdev)
-				local dev
+				local dev netmode what
 				config_get dev "$section" "dev"
-				if [ -n "$dev" ]; then
-					mode="activity"
-					mode_args="netdev-$dev"
-				fi
-				# We ignore mode as rainbow does not support it
-				;;
-			phy*)
-				mode="activity"
-				mode_args="${trigger%${trigger#phy[0-9]}}"
+				config_get netmode "$section" "mode"
+				case "$dev" in
+					""|*[!A-Za-z0-9_.:@-]*)
+						;;
+					*)
+						mode="activity"
+						mode_args="netdev-$dev"
+						# These are attributes of the trigger, for example
+						# link, link_1000, tx or rx
+						for what in $netmode; do
+							case "$what" in
+								*[!a-z0-9_]*)
+									;;
+								*)
+									mode_args="$mode_args	$what"
+									;;
+							esac
+						done
+						;;
+				esac
 				;;
 			usbdev|usbport)
 				mode="activity"
@@ -225,7 +239,18 @@ _uci_system_section() {
 				# We ignore dev as rainbow simply follows all USB devices
 				;;
 			*)
-				warning "Unsupported trigger '$trigger' for: system.$section ($sysfs)"
+				# Any other trigger the kernel has for this LED and that
+				# needs no setup, such as disk-activity or phy0tpt
+				if ! _activity_needs_setup "$trigger" \
+						&& [ -n "$(supported_activities "$led" -xF -e "$trigger")" ]; then
+					mode="activity"
+					mode_args="$trigger"
+				else
+					warning "Unsupported trigger '$trigger' for: system.$section ($sysfs)"
+					# We do not know how to set this one up, so keep the LED
+					# the way /etc/init.d/led configured it.
+					mode="ignore"
+				fi
 				;;
 		esac
 	fi
