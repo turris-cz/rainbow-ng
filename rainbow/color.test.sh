@@ -43,6 +43,12 @@ check_fail "532,0,0"
 check_fail "0,342,123"
 check_fail "42,255,256"
 
+check "xFF,0,x7f" 255 0 127
+check "x0,x0,x0" 0 0 0
+check ",x2A," "?" 42 "?"
+check_fail "x100,0,0"
+check_fail "xG,0,0"
+
 check "R0,G0,B0" 0 0 0
 check "R255,B255" 255 '?' 255
 check "R42,B1" 42 '?' 1

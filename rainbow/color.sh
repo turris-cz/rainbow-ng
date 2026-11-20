@@ -95,7 +95,7 @@ _parse_color() {
 			;;
 	esac
 
-	if echo "$value" | grep -qE "^[0-9-]*,[0-9-]*,[0-9-]*$"; then
+	if echo "$value" | grep -qE "^([0-9-]*|x[0-9a-fA-F]+),([0-9-]*|x[0-9a-fA-F]+),([0-9-]*|x[0-9a-fA-F]+)$"; then
 		matched="y"
 		r="$(_parse_value "${value%%,*}" "$mode")" || return
 		local inter="${value%,*}"
