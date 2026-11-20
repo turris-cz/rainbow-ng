@@ -74,13 +74,16 @@ def reload():
     fcntl.flock(dirfd, fcntl.LOCK_EX)
 
     base_color: dict[int, dict[str, typing.Optional[int]]] = {}
-    files = [pth for pth in rainbowdir.iterdir() if pth.is_file and not pth.name.startswith(".")]
+    files = [pth for pth in rainbowdir.iterdir() if pth.is_file() and not pth.name.startswith(".")]
     files.sort()
     for filepath in files:
         with filepath.open() as file:
             i = 0
             for line in file:
                 fields = line.rstrip().split("\t")
+                if len(fields) < 4:
+                    i += 1
+                    continue  # Not a line rainbow writes
                 base_color[i] = {COLORS[y]: _base_color(base_color, i, COLORS[y], fields[y]) for y in range(3)}
                 if fields[3] == "animate" and backend.handled(i):
                     frames = []
@@ -109,7 +112,6 @@ def reload():
         del state[ledid]
     for ledid in configuration_keys - state_keys:  # Initialize new states
         state[ledid] = {
-            "index": 0,
             "start": time.monotonic_ns(),
         }
 
@@ -133,19 +135,22 @@ def interpolate(a, b, timeoff):
 
 def update():
     """Animation function."""
+    now = time.monotonic_ns()
     for ledid, points in configuration.items():
-        curi = state[ledid]["index"]
-        nexti = curi + 1
-        if len(points) <= nexti:
-            nexti = 0
-        timeoff = time.monotonic_ns() - state[ledid]["start"]
-        while timeoff > points[curi]["ns"]:
-            timeoff -= points[curi]["ns"]
-            curi = nexti
-            nexti += 1
-            if len(points) <= nexti:
-                nexti = 0
-        red, green, blue = interpolate(points[curi], points[nexti], timeoff)
+        cycle = sum(point["ns"] for point in points)
+        if cycle <= 0:
+            # No frame takes any time, so there is nothing to move between
+            red, green, blue = (points[0][color] for color in COLORS)
+        else:
+            # Only the position in the current cycle matters. Walking all the
+            # frames since the start would take longer with every cycle.
+            timeoff = (now - state[ledid]["start"]) % cycle
+            curi = 0
+            while timeoff >= points[curi]["ns"]:
+                timeoff -= points[curi]["ns"]
+                curi += 1
+            nexti = (curi + 1) % len(points)
+            red, green, blue = interpolate(points[curi], points[nexti], timeoff)
         backend.update(ledid, red, green, blue)
     backend.apply()
 
