@@ -52,6 +52,7 @@ led_help() {
 		    Rainbow should ignore this led all together
 		Options:
 		  -l  Show configuration only for the current priority and slot
+		  -n  Print the name of the LED in front of its configuration
 		  -h  Print this help text and exit
 	EOF
 }
@@ -59,11 +60,15 @@ led_help() {
 op_led() {
 	local id="$1"; shift
 	local localconf="n"
+	local names="n"
 	local OPTIND=1
-	while getopts "lh" opt; do
+	while getopts "lnh" opt; do
 		case "$opt" in
 			l)
 				localconf="y"
+				;;
+			n)
+				names="y"
 				;;
 			h)
 				led_help "$id"
@@ -146,6 +151,7 @@ op_led() {
 	# standard output.
 	config() {
 		if [ "$id" = "all" ] || [ "$led" = "$id" ]; then
+			[ "$names" != "y" ] || printf "%s\t" "$led" >&3
 			printf "%s\t%s\t%s\t%s\n" "$color_r" "$color_g" "$color_b" \
 				"$mode${mode_args:+	}$mode_args" >&3
 		fi
