@@ -1,10 +1,11 @@
-#!/bin/ash
+#!/bin/bash
 
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright 2022, CZ.NIC z.s.p.o. (https://www.nic.cz/)
 
 set -eu
-. "${0%/*}/color.sh"
+. "${0%/*}/utils.sh"
+loadsrc color
 
 fail() {
 	echo "$@" >&2
@@ -70,6 +71,28 @@ check "123,-,-" "123" "-" "-" inherit
 
 check_fail "ABCDF"
 check_fail "ABCDF01"
+check_fail "orange"
+check_fail "Rx1FF"
+check_fail "Rx"
+check_fail "R-1"
+check_fail "1,2"
+check_fail "1,2,3,4"
+
+# Nothing that is not a plain number may get to the shell arithmetic. The
+# marker would be created by a command substitution in an array subscript.
+marker="$(mktemp -u)"
+check_fail "Rx1+marker[\$(touch $marker)]"
+check_fail "x1+marker[\$(touch $marker)],2,3"
+check_fail "R1
+Rx1+marker[\$(touch $marker)]"
+check_fail "x1+marker[\$(touch $marker)]
+1,2,3"
+check_fail "FF00FF
+x"
+[ ! -e "$marker" ] || {
+	rm -f "$marker"
+	fail "A color value was executed"
+}
 
 
 check "000000" 0 0 0

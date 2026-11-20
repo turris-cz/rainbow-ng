@@ -1,10 +1,11 @@
-#!/bin/ash
+#!/bin/bash
 
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright 2022, CZ.NIC z.s.p.o. (https://www.nic.cz/)
 
 set -eu
-. "${0%/*}/ledid.sh"
+. "${0%/*}/utils.sh"
+loadsrc ledid
 
 fail() {
 	echo "$@" >&2
@@ -24,8 +25,12 @@ not_valid() {
 for led in $LEDS; do
 	valid "$led"
 done
-not_valid "power"
+not_valid "pwr"
 not_valid "usr"
+not_valid "led"
+not_valid "led0"
+not_valid "ledfoo"
+not_valid "led1x"
 not_valid "p"
 not_valid "1"
 

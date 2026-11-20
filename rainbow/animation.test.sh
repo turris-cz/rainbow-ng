@@ -1,12 +1,10 @@
-#!/bin/ash
+#!/bin/bash
 
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright 2022, CZ.NIC z.s.p.o. (https://www.nic.cz/)
 
 set -eu
-loadsrc() {
-	. "${0%/*}/$1.sh"
-}
+. "${0%/*}/utils.sh"
 loadsrc animation
 
 fail() {
@@ -39,3 +37,9 @@ check \
 	"0	0	0	1000	255	0	0	1000" \
 	2 \
 	black 1000 red 1000 something else
+
+# The time has to be a plain number
+check "" 2 red 10x
+check "" 2 red -5
+check "" 2 red "10
+20"
