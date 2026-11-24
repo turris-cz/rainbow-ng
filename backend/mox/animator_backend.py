@@ -14,9 +14,9 @@ class Backend:
 
     def update(self, ledid: int, red: int, green: int, blue: int) -> None:
         """Update color of LED on given index."""
-        assert ledid == "activity"
+        assert ledid == 0  # There is only one LED
         brightness = self.uci.get("rainbow", "all", "brightness", dtype=int, default=255)
-        os.write(self._fd, f"{red * brightness / 255}".encode())
+        os.write(self._fd, f"{red * brightness // 255}".encode())
 
     def apply(self) -> None:
         """Apply previous LEDs state updates if that is required."""

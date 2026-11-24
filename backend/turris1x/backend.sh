@@ -31,10 +31,45 @@ led_defaults() {
 	esac
 }
 
+# The button on the router steps through the brightness levels. Report the one
+# in use in the 0-255 range, with the same steps preapply uses the other way.
 get_brightness() {
-	local cur
-	cur="$(cat "$SYSFS/brightness")"
-	echo $cur
+	local level
+	level="$(get_brightness_raw)"
+	if [ "$level" -ge 7 ]; then
+		echo 255
+	else
+		echo "$((level * 32))"
+	fi
+}
+
+get_brightness_raw() {
+	cat "$SYSFS/brightness_level"
+}
+
+# Convert the brightness in the 0-255 range to what is written to the
+# hardware, which is the level. We only have 8 of them with indexes 0-7.
+brightness_to_raw() {
+	local level="$(($1 / 32))"
+	if [ "$level" -gt 7 ]; then
+		level=7
+	fi
+	echo "$level"
+}
+
+# Set the brightness each of the eight levels stands for
+set_brightness_levels() {
+	if [ -e "$SYSFS/brightness_values" ]; then
+		# Driver in Turris OS
+		echo "$*" >"$SYSFS/brightness_values"
+	elif [ -d "$SYSFS/brightness_levels" ]; then
+		# Driver in OpenWrt, one file per level
+		local level=0 value
+		for value in "$@"; do
+			sysfs_write "$value" "$SYSFS/brightness_levels/$level"
+			level=$((level + 1))
+		done
+	fi
 }
 
 preapply() {
@@ -42,31 +77,27 @@ preapply() {
 		/etc/init.d/rainbow-animator pause
 	fi
 
-	local brightness_level
-	brightness_level="$(($(brightness) / 32))"
-	# we only have 8 indexes - 0-7, but $brightness_level is 0-8
-	if [ $brightness_level = 8 ]; then
-		brightness_level=7
-	fi
-	echo 0 2 4 8 16 32 64 255 > $SYSFS/brightness_values
-	echo $brightness_level > $SYSFS/brightness_level
+	set_brightness_levels 0 2 4 8 16 32 64 255
+	sysfs_write "$(brightness_to_raw "$(brightness)")" "$SYSFS/brightness_level"
 }
 
 set_led() {
 	local led="$1" r="$2" g="$3" b="$4" mode="$5"
 	shift 5
+	# Nothing to do for an LED the kernel does not provide
+	[ -d "$(led2sysfs "$led")" ] || return 0
 
 	if [ "$mode" = "auto" ]; then # override auto mode for some
 		case "$led" in
 			power)
 				mode="enable"
 				;;
-			wlan*)
-				local trigger
-				loadsrc pci
-				if trigger="$(pci_device_activity_detect "$led" "/sys/bus/pci/devices/0000:0${led#pci}:00.0")"; then
+			wlan)
+				# The CPLD has no hardware trigger for this LED, so follow
+				# the first wireless device when there is one.
+				if [ -n "$(supported_activities "$led" -xF 'phy0tpt')" ]; then
 					mode="activity"
-					set "$trigger"
+					set "phy0tpt"
 				else
 					mode="disable"
 				fi
@@ -74,13 +105,12 @@ set_led() {
 		esac
 	fi
 
-	local brightness=1 trigger="none"
+	local sysfs brightness trigger="none"
+	sysfs="$(led2sysfs "$led")"
+	brightness="$(cat "$sysfs/max_brightness")"
 	case "$mode" in
 		auto)
-			case "$led" in
-				wlan) trigger="phy0tpt" ;;
-				*) trigger="turris1x-cpld" ;;
-			esac
+			trigger="turris1x-cpld"
 			;;
 		disable)
 			brightness=0
@@ -98,19 +128,25 @@ set_led() {
 			;;
 	esac
 
-	local sysfs
-	sysfs="$(led2sysfs "$led")"
 	# We have to disable trigger first to make sure that changes are correctly
 	# applied and not modified by this in the meantime.
-	echo "none" > "$sysfs/trigger"
-	echo "$brightness" > "$sysfs/brightness"
-	echo "$r $g $b" > "$sysfs/multi_intensity"
+	# This function is called with errexit off, so collect the failures to
+	# report them to the caller.
+	local ret=0
+	echo "none" > "$sysfs/trigger" || ret=1
+	echo "$brightness" > "$sysfs/brightness" || ret=1
+	echo "$r $g $b" > "$sysfs/multi_intensity" || ret=1
 	if [ "$trigger" = "activity" ]; then
-		apply_activity "$led" "$@" \
-			|| echo "Warning: activity setup failed for: $led" >&2
-	else
-		echo "$trigger" > "$sysfs/trigger"
+		if ! apply_activity "$led" "$@"; then
+			warning "activity setup failed for: $led"
+			# Without the trigger the LED would just stay lit, which is
+			# what the enable mode looks like.
+			echo 0 > "$sysfs/brightness" || ret=1
+		fi
+	elif ! echo "$trigger" 2>/dev/null >"$sysfs/trigger"; then
+		warning "The trigger '$trigger' is not available for: $led"
 	fi
+	return $ret
 }
 
 postapply() {
@@ -119,21 +155,24 @@ postapply() {
 	fi
 }
 
+# The arguments are the LEDs to perform the sequence on
 boot_sequence() {
-	local sysfs
+	local sysfs led
 
-	for led in $LEDS; do
+	for led in "$@"; do
 		sysfs="$(led2sysfs "$led")"
+		[ -d "$sysfs" ] || continue
 		echo "none" > "$sysfs/trigger"
-		echo "1" > "$sysfs/brightness"
+		cat "$sysfs/max_brightness" > "$sysfs/brightness"
 		echo "0 255 0" > "$sysfs/multi_intensity"
 	done
 	sleep 1
 
-	for led in $LEDS; do
+	for led in "$@"; do
 		sysfs="$(led2sysfs "$led")"
+		[ -d "$sysfs" ] || continue
 		echo "none" > "$sysfs/trigger"
-		echo "1" > "$sysfs/brightness"
+		cat "$sysfs/max_brightness" > "$sysfs/brightness"
 		echo "0 0 255" > "$sysfs/multi_intensity"
 	done
 	sleep 1

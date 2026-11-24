@@ -2,6 +2,12 @@ PREFIX := /usr
 
 all:
 
+test:
+	@for test in rainbow/*.test.sh; do \
+		echo "$$test"; \
+		bash "$$test" || exit 1; \
+	done
+
 install: rainbow-install button-sync-install animator-install
 
 rainbow-install:
@@ -40,4 +46,4 @@ turris1x-install:
 	install -D -m 644 backend/turris1x/animator_backend.py ${DESTDIR}${PREFIX}/libexec/rainbow/animator_backend.py
 	install -D -m 644 backend/turris1x/backend.sh ${DESTDIR}${PREFIX}/libexec/rainbow/backend.sh
 
-.PHONY: all install rainbow-install button-sync-install animator-install mox-install omnia-install turris1x-install
+.PHONY: all test install rainbow-install button-sync-install animator-install mox-install omnia-install turris1x-install

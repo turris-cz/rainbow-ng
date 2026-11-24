@@ -17,8 +17,8 @@ led2sysfs() {
 	false
 }
 
-# Allows modification of defaults for specific leds (it is called with 'all' as
-# well).
+# Allows modification of defaults for specific leds. What is set in the UCI
+# section for all the LEDs and in the section of the LED overrides them.
 # It is called in environment where following variables are defined and
 # available for modification:
 # color_r: red color
@@ -48,6 +48,22 @@ get_brightness_raw() {
 }
 
 
+# This function is optional. It gets one of the levels 0-8 that the brightness
+# operation takes and echoes the brightness in the 0-255 range it stands for.
+# Without it the levels are spread evenly.
+brightness_level() {
+	local level="$1"
+	false
+}
+
+# This function is optional and is used by button_sync.sh together with
+# get_brightness_raw. It converts the brightness in the 0-255 range to the value
+# the hardware reports in get_brightness_raw. With both functions the button
+# sync can tell a change made by the button from the one rainbow made itself.
+brightness_to_raw() {
+	false
+}
+
 # The optional function that is called before application of state using
 # set_led. This should be used to prepare environment as well as to pause
 # animator for example.
@@ -75,6 +91,8 @@ postapply() {
 # Perform boot sequence specific for this device.
 # This function is only optional and does not have to be defined if there is no
 # boot sequence.
+# It gets the LEDs to perform the sequence on as its arguments. Those are all
+# the LEDs except for the ones in the ignore mode.
 boot_sequence() {
 	false
 	# Note: The current state is always applied in the end in when this function

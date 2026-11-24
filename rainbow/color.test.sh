@@ -1,10 +1,11 @@
-#!/bin/ash
+#!/bin/bash
 
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright 2022, CZ.NIC z.s.p.o. (https://www.nic.cz/)
 
 set -eu
-. "${0%/*}/color.sh"
+. "${0%/*}/utils.sh"
+loadsrc color
 
 fail() {
 	echo "$@" >&2
@@ -42,6 +43,12 @@ check_fail "532,0,0"
 check_fail "0,342,123"
 check_fail "42,255,256"
 
+check "xFF,0,x7f" 255 0 127
+check "x0,x0,x0" 0 0 0
+check ",x2A," "?" 42 "?"
+check_fail "x100,0,0"
+check_fail "xG,0,0"
+
 check "R0,G0,B0" 0 0 0
 check "R255,B255" 255 '?' 255
 check "R42,B1" 42 '?' 1
@@ -70,6 +77,28 @@ check "123,-,-" "123" "-" "-" inherit
 
 check_fail "ABCDF"
 check_fail "ABCDF01"
+check_fail "orange"
+check_fail "Rx1FF"
+check_fail "Rx"
+check_fail "R-1"
+check_fail "1,2"
+check_fail "1,2,3,4"
+
+# Nothing that is not a plain number may get to the shell arithmetic. The
+# marker would be created by a command substitution in an array subscript.
+marker="$(mktemp -u)"
+check_fail "Rx1+marker[\$(touch $marker)]"
+check_fail "x1+marker[\$(touch $marker)],2,3"
+check_fail "R1
+Rx1+marker[\$(touch $marker)]"
+check_fail "x1+marker[\$(touch $marker)]
+1,2,3"
+check_fail "FF00FF
+x"
+[ ! -e "$marker" ] || {
+	rm -f "$marker"
+	fail "A color value was executed"
+}
 
 
 check "000000" 0 0 0

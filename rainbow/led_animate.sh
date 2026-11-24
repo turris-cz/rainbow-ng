@@ -22,6 +22,7 @@ led_animate_help() {
 
 op_led_animate() {
 	local id="$1"; shift
+	local OPTIND=1
 	while getopts "h" opt; do
 		case "$opt" in
 			h)
@@ -40,6 +41,10 @@ op_led_animate() {
 	parse_animation "$@"
 	shift $(($# - SHIFTARGS))
 	mode_args="$animation"
+
+	# The animation is performed by the animator, which is a separate package
+	[ -x /etc/init.d/rainbow-animator ] \
+		|| warning "The animate mode needs the rainbow-animator package, which is not installed."
 
 	SHIFTARGS=$#
 }

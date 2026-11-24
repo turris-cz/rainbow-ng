@@ -11,13 +11,15 @@ brightness_help() {
 	# Note: We use 0-8 as that is the number of levels Omnia can specify using
 	# button. The Turris 1.x has only 7 levels but we can use 7 and 8 as the
 	# same. The Mox has no levels thus we are free to choose what ever we want.
+	# A backend can define brightness_level to say what the levels stand for.
 	cat >&2 <<-EOF
 		Set maximum brightness (the global modifier for all controlled leds).
 		The brightness has to be specified as number between 0 and 8 (or 255
 		if -p is used).
 
 		Options:
-		  -q  Query for current setting instead of setting brightness
+		  -q  Query for current setting instead of setting brightness (the
+		      value is always printed in the range from 0 to 255)
 		  -p  Higher precission for brightness
 		  -h  Print this help text and exit
 	EOF
@@ -26,6 +28,7 @@ brightness_help() {
 op_brightness() {
 	local query=
 	local precise=
+	local OPTIND=1
 	while getopts "qph" opt; do
 		case "$opt" in
 			q)
@@ -44,33 +47,52 @@ op_brightness() {
 				;;
 		esac
 	done
+	shift $((OPTIND - 1))
 	if [ "$query" ]; then
 		brightness fetch
-		return $#
+		SHIFTARGS=$#
+		return 0
 	fi
 
-	shift $((OPTIND - 1))
 	[ $# -gt 0 ] || {
 		brightness_usage
 		exit 2
 	}
-	brightness="$1"
+	local value="$1"
+	shift
+	# The value is used in shell arithmetic, so make sure it is a number
+	is_uint "$value" && value="$(decimal "$value")" || value=-1
 	if [ "$precise" ]; then
-		if [ "$brightness" -lt 0 ] || [ "$brightness" -gt 255 ]; then
+		if [ "$value" -lt 0 ] || [ "$value" -gt 255 ]; then
 			echo "The value has to be a number from 0 to 255!" >&2
 			brightness_usage
 			exit 2
 		fi
 	else
-		if [ "$brightness" -lt 0 ] || [ "$brightness" -gt 8 ]; then
+		if [ "$value" -lt 0 ] || [ "$value" -gt 8 ]; then
 			echo "The value has to be a number from 0 to 8!" >&2
 			brightness_usage
 			exit 2
 		fi
-		brightness=$((brightness * 32))
+		if type brightness_level >/dev/null 2>&1; then
+			# The backend knows what the levels stand for on its board
+			value="$(brightness_level "$value")"
+		else
+			value=$((value * 32))
+			# The highest level is the full brightness, which is 255 and
+			# not 256
+			[ "$value" -le 255 ] || value=255
+		fi
 	fi
-	update_brightness "$brightness"
-	apply_needed="y"
-
 	SHIFTARGS=$#
+	# What is left has to be the next operation
+	local next
+	next="$(next_argument "$@")"
+	if [ -n "$next" ] && ! is_operation "$next"; then
+		echo "Invalid argument for brightness: $next" >&2
+		brightness_usage
+		exit 2
+	fi
+	update_brightness "$value"
+	apply_needed="y"
 }

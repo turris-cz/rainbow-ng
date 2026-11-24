@@ -21,7 +21,7 @@ animation_add() {
 	local color_b="$animation_color_b"
 
 	parse_color "$1" inherit || return
-	echo "$time" | grep -qE "^[0-9]+$" || return
+	is_uint "$time" || return
 
 	animation="${animation}${animation:+	}$color_r	$color_g	$color_b	$time"
 	animation_color_r="$color_r"

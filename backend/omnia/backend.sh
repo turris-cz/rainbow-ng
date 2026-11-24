@@ -40,21 +40,45 @@ get_brightness() {
 	echo $(((cur * 255 + 50) / 100))
 }
 
+# The brightness in the 0-255 range for the levels of "rainbow brightness".
+# The levels are the steps the button on the router goes through, which are
+# 0, 1, 5, 12, 25, 40, 70 and 100 percent, so that both ways of setting the
+# brightness give the same result. Level 8 is the same as level 7.
+brightness_level() {
+	local percent
+	case "$1" in
+		0) percent=0 ;;
+		1) percent=1 ;;
+		2) percent=5 ;;
+		3) percent=12 ;;
+		4) percent=25 ;;
+		5) percent=40 ;;
+		6) percent=70 ;;
+		*) percent=100 ;;
+	esac
+	echo "$(((percent * 255 + 50) / 100))"
+}
+
+# Convert the brightness in the 0-255 range to what is written to the hardware
+# The full range is only 0-100 but that is good enough so we don't adjust more.
+# We just loose the precision on Omnia but who can see it anyway.
+brightness_to_raw() {
+	echo "$((($1 * 100 + 127) / 255))"
+}
+
 preapply() {
 	if [ -x /etc/init.d/rainbow-animator ]; then
 		/etc/init.d/rainbow-animator pause
 	fi
 
-	local brightness_level
-	brightness_level="$(brightness)"
-	# The full range is only 0-100 but that is good enough so we don't adjust
-	# more. We just loose the precision on Omnia but who can see it anyway.
-	echo "$(((brightness_level * 100 + 127) / 255))" > "$SYSFS/brightness"
+	sysfs_write "$(brightness_to_raw "$(brightness)")" "$SYSFS/brightness"
 }
 
 set_led() {
 	local led="$1" r="$2" g="$3" b="$4" mode="$5"
 	shift 5
+	# Nothing to do for an LED the kernel does not provide
+	[ -d "$(led2sysfs "$led")" ] || return 0
 
 	if [ "$mode" = "auto" ]; then # override auto mode for some
 		case "$led" in 
@@ -62,9 +86,11 @@ set_led() {
 				mode="enable"
 				;;
 			wlan*)
+				# The LED was named pciN when this lookup was written, so N
+				# is taken for the number of the PCI bus of its slot.
 				local trigger
 				loadsrc pci
-				if trigger="$(pci_device_activity_detect "$led" "/sys/bus/pci/devices/0000:0${led#pci}:00.0")"; then
+				if trigger="$(pci_device_activity_detect "$led" "/sys/bus/pci/devices/0000:0${led#wlan-}:00.0")"; then
 					mode="activity"
 					set "$trigger"
 				else
@@ -102,15 +128,23 @@ set_led() {
 
 	# We have to disable trigger first to make sure that changes are correctly
 	# applied and not modified by this in the meantime.
-	echo "none" > "$sysfs/trigger"
-	echo "$brightness" > "$sysfs/brightness"
-	echo "$r $g $b" > "$sysfs/multi_intensity"
+	# This function is called with errexit off, so collect the failures to
+	# report them to the caller.
+	local ret=0
+	echo "none" > "$sysfs/trigger" || ret=1
+	echo "$brightness" > "$sysfs/brightness" || ret=1
+	echo "$r $g $b" > "$sysfs/multi_intensity" || ret=1
 	if [ "$trigger" = "activity" ]; then
-		apply_activity "$led" "$@" \
-			|| echo "Warning: activity setup failed for: $led" >&2
-	else
-		echo "$trigger" > "$sysfs/trigger"
+		if ! apply_activity "$led" "$@"; then
+			warning "activity setup failed for: $led"
+			# Without the trigger the LED would just stay lit, which is
+			# what the enable mode looks like.
+			echo 0 > "$sysfs/brightness" || ret=1
+		fi
+	elif ! echo "$trigger" 2>/dev/null >"$sysfs/trigger"; then
+		warning "The trigger '$trigger' is not available for: $led"
 	fi
+	return $ret
 }
 
 postapply() {
@@ -120,21 +154,24 @@ postapply() {
 }
 
 
+# The arguments are the LEDs to perform the sequence on
 boot_sequence() {
-	local sysfs
+	local sysfs led
 
-	for led in $LEDS; do
+	for led in "$@"; do
 		sysfs="$(led2sysfs "$led")"
+		[ -d "$sysfs" ] || continue
 		echo "none" > "$sysfs/trigger"
-		echo "1" > "$sysfs/brightness"
+		cat "$sysfs/max_brightness" > "$sysfs/brightness"
 		echo "0 255 0" > "$sysfs/multi_intensity"
 	done
 	sleep 1
 
-	for led in $LEDS; do
+	for led in "$@"; do
 		sysfs="$(led2sysfs "$led")"
+		[ -d "$sysfs" ] || continue
 		echo "none" > "$sysfs/trigger"
-		echo "1" > "$sysfs/brightness"
+		cat "$sysfs/max_brightness" > "$sysfs/brightness"
 		echo "0 0 255" > "$sysfs/multi_intensity"
 	done
 	sleep 1

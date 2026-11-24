@@ -30,13 +30,17 @@ set_led() {
 	local led="$1" r="$2" g="$3" b="$4" mode="$5"
 	shift 5
 	[ "$led" = "activity" ] || return
+	# Nothing to do when the kernel does not provide the LED
+	[ -d "$SYSFS" ] || return 0
 
 	if [ "$mode" = "auto" ]; then # override auto mode
 		mode="activity"
-		mode_args="heartbeat"
+		set "heartbeat"
 	fi
 	local global_brightness
 	global_brightness="$(brightness)"
+	# The color is used in shell arithmetic, so make sure it is a number
+	is_uint "$r" || r=0
 
 	local brightness=255 trigger="none"
 	case "$mode" in
@@ -48,6 +52,11 @@ set_led() {
 		activity)
 			brightness=0
 			trigger="activity"
+			# The trigger switches the LED on its own, so the only way to
+			# honor zero brightness is not to use it.
+			if [ "$global_brightness" -eq 0 ] || [ "$r" -eq 0 ]; then
+				trigger="none"
+			fi
 			;;
 		animate)
 			# For animation we we rely on animator
@@ -60,14 +69,18 @@ set_led() {
 
 	# We have to disable trigger first to make sure that changes are correctly
 	# applied and not modified by this in the meantime.
-	echo "none" > "$SYSFS/trigger"
-	echo "$brightness" > "$SYSFS/brightness"
+	# This function is called with errexit off, so collect the failures to
+	# report them to the caller.
+	local ret=0
+	echo "none" > "$SYSFS/trigger" || ret=1
+	echo "$brightness" > "$SYSFS/brightness" || ret=1
 	if [ "$trigger" = "activity" ]; then
-		apply_activity "$led" $mode_args "$@" \
-			|| echo "Warning: activity setup failed for: $led" >&2
+		apply_activity "$led" "$@" \
+			|| warning "activity setup failed for: $led"
 	else
-		echo "$trigger" > "$SYSFS/trigger"
+		echo "$trigger" > "$SYSFS/trigger" || ret=1
 	fi
+	return $ret
 }
 
 postapply() {

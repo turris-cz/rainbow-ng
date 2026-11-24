@@ -18,6 +18,7 @@ led_activity_help() {
 op_led_activity() {
 	local id="$1"; shift
 	local list="n"
+	local OPTIND=1
 	while getopts "t:lih" opt; do
 		case "$opt" in
 			l)
@@ -40,73 +41,100 @@ op_led_activity() {
 		exit 0
 	fi
 
-	# Note: we do not support every single activity trigger. For example we only
-	# support trigger that do both TX and RX not the separate ones.
 	# Warning: this sets mode_args as this is expected to be called only from
 	# op_led function!
-	mode_args=""
+	mode_args="activity"
 	case "${1:-}" in
 		"")
-			mode_args="activity"
-			shift || true
 			;;
-		activity|activity-inverted|heartbeat|heartbeat-inverted|disk-activity|usbport)
+		activity|activity-inverted|heartbeat|heartbeat-inverted|disk-activity|usbport|netdev-?*)
+			# We do not intentionally verify that these are available right
+			# now. The module with the trigger can be loaded later and the
+			# network device can be a hotplug one.
+			case "$1" in
+				*[!A-Za-z0-9_.:@-]*|netdev-????????????????*)
+					# The kernel takes at most 15 characters
+					echo "Invalid name of the network device: ${1#netdev-}" >&2
+					exit 2
+					;;
+			esac
 			mode_args="$1"
 			shift
 			;;
-		activity-inverted|heartbeat-inverted)
-			;;
-		netdev-*)
-			# We do not intentionally verify that device exists as this way the
-			# hotplug devices can be configured as well.
-			mode_args="netdev\t${1#netdev-}"
-			shift
-			;;
-		mmc*|phy*|ata*|netfilter-*)
-			[ -n "$(supported_activities "$id" -xF "$1")" ] || {
-				echo "The requested activity is invalid: $1" >&2
-				usage
+		*)
+			# Anything else has to be something the kernel offers for this LED.
+			# A color or the next operation is left for the caller.
+			if [ -n "$(all_supported_activities "$id" | grep -xF -e "$1")" ]; then
+				mode_args="$1"
+				shift
+			elif ! (parse_color "$1" inherit) && ! is_operation "$1"; then
+				echo "The activity is not available for '$id': $1" >&2
+				led_activity_usage "$id"
 				exit 2
-			}
-			mode_args="$1"
-			shift
+			fi
 			;;
 	esac
 	SHIFTARGS=$#
 }
 
-# Provide supported activities that are filtered using grep
-supported_activities() {
-	local led
-	led="$(canonled "$1")"; shift
+# Triggers the kernel offers for the given led, one per line. The active one is
+# listed without the brackets the kernel puts around it.
+led_triggers() {
+	local led sysfs
+	led="$(canonled "$1")"
 	if [ "$led" = "all" ]; then
 		for led in $LEDS; do
-			supported_activities "$led" "$@" \
-				| sort -u
-		done
-	else
-		tr ' ' '\n' <"$(led2sysfs "$led")/trigger" \
-			| grep "$@" || true
+			led_triggers "$led"
+		done | sort -u
+		return 0
 	fi
+	sysfs="$(led2sysfs "$led")" || return 0
+	[ -e "$sysfs/trigger" ] || return 0
+	tr ' ' '\n' <"$sysfs/trigger" | sed -e 's/^\[//' -e 's/\]$//'
+}
+
+# Provide supported activities that are filtered using grep
+supported_activities() {
+	local led="$1"; shift
+	led_triggers "$led" | grep "$@" || true
+}
+
+# Triggers that can't be used as an activity just by their name. They either
+# need parameters we have no way to pass or have their own mode.
+_activity_needs_setup() {
+	case "$1" in
+		none|netdev|oneshot|pattern|gpio|transient|tty|switch[0-9]*)
+			return 0
+			;;
+	esac
+	return 1
 }
 
 # Lists all supported activities for given led.
 all_supported_activities() {
-	local led
-	led="$(canonled "$1")"
-	supported_activities "$led" -xF "activity" \
-		&& echo "activity-inverted"
-	supported_activities "$led" -xF "heartbeat" \
-		&& echo "heartbeat-inverted"
-	supported_activities "$led" \
-		-E "^(disk-activity|usbport|(mmc|ata)[0-9]+|netfilter-.*)$"
-	supported_activities "$led" -E "^phy[0-9]+tpt$" | sed 's/tpt$//'
-	if [ -n "$(supported_activities "$led" -E "netdev")" ]; then
-		for netdev in /sys/class/net/*; do
-			[ -e "$netdev" ] || continue
-			echo "netdev-${netdev##*/}"
-		done
-	fi
+	local trigger netdev
+	led_triggers "$1" | while read -r trigger; do
+		case "$trigger" in
+			activity|heartbeat)
+				echo "$trigger"
+				echo "$trigger-inverted"
+				;;
+			netdev)
+				for netdev in /sys/class/net/*; do
+					[ -e "$netdev" ] || continue
+					echo "netdev-${netdev##*/}"
+				done
+				;;
+			phy[0-9]tpt|phy[0-9][0-9]tpt)
+				# The short form is kept for the backward compatibility
+				echo "${trigger%tpt}"
+				echo "$trigger"
+				;;
+			*)
+				_activity_needs_setup "$trigger" || echo "$trigger"
+				;;
+		esac
+	done
 }
 
 # Check if activities are even supported for given led.
@@ -133,44 +161,93 @@ led_activities_supported() {
 apply_activity() {
 	local led="$1"; shift
 	local trigger="${1:-}"
-	local sysfs
+	local sysfs port
 	sysfs="$(led2sysfs "$led")"
+	[ -e "$sysfs/trigger" ] || return
 	case "$trigger" in
+		"")
+			internal_error "Missing activity arguments for:" "$led"
+			;;
 		activity|activity-inverted|heartbeat|heartbeat-inverted)
-			local systrigger="${trigger%-inverted}"
-			echo "$systrigger" >"$sysfs/trigger"
-			grep -qF "[$systrigger]" "$sysfs/trigger"
-			if [ "${trigger%-inverted}" == "$trigger" ]; then
-				echo "0" >"$sysfs/invert"
-			else
-				echo "1" >"$sysfs/invert"
+			_set_trigger "$sysfs" "${trigger%-inverted}" || return
+			if [ "${trigger%-inverted}" = "$trigger" ]; then
+				_set_attribute "$sysfs/invert" 0
+			elif [ ! -e "$sysfs/invert" ] \
+					|| ! echo 1 2>/dev/null >"$sysfs/invert"; then
+				# Without the attribute the LED would signal the plain way
+				return 1
 			fi
 			;;
-		disk-activity|mmc*|ata*|netfilter-*)
-			echo "$trigger" >"$sysfs/trigger"
-			grep -qF "[$trigger]" "$sysfs/trigger"
-			;;
 		usbport)
-			echo "$trigger" >"$sysfs/trigger"
-			grep -qF "[$trigger]" "$sysfs/trigger" || return
+			_set_trigger "$sysfs" "$trigger" || return
 			for port in "$sysfs"/ports/*; do
-				echo 1 > "$port"
+				_set_attribute "$port" 1
 			done
 			;;
-		phy*)
-			echo "${trigger}tpt" >"$sysfs/trigger"
-			grep -qF "[${trigger}tpt]" "$sysfs/trigger"
+		timer)
+			# Optional arguments are the time the LED is on and off, with a
+			# dash for the one that is to be left on the kernel default.
+			_set_trigger "$sysfs" "$trigger" || return
+			if is_uint "${2:-}"; then
+				_set_attribute "$sysfs/delay_on" "$2"
+			fi
+			if is_uint "${3:-}"; then
+				_set_attribute "$sysfs/delay_off" "$3"
+			fi
+			;;
+		phy[0-9]|phy[0-9][0-9])
+			_set_trigger "$sysfs" "${trigger}tpt" || return
 			;;
 		netdev-*)
-			echo "netdev" >"$sysfs/trigger"
-			grep -qF '[netdev]' "$sysfs/trigger" || return
-			echo "${trigger#netdev-}" >"$sysfs/device_name"
-			echo 1 >"$sysfs/link"
-			echo 1 >"$sysfs/rx"
-			echo 1 >"$sysfs/tx"
+			_set_trigger "$sysfs" "netdev" || return
+			# The kernel counts the newline into the length of the name, so
+			# it would refuse a name of the full 15 characters with it.
+			if ! printf '%s' "${trigger#netdev-}" 2>/dev/null >"$sysfs/device_name"; then
+				warning "The kernel refused the network device name: ${trigger#netdev-}"
+				return 1
+			fi
+			# Optional arguments are the attributes of the trigger to switch
+			# on, such as link, link_1000, tx or rx. The link and the traffic
+			# in both directions are signaled when there are none.
+			shift
+			local what
+			if [ -z "$*" ]; then
+				set link tx rx
+			else
+				for what in link link_10 link_100 link_1000 link_2500 \
+						link_5000 link_10000 half_duplex full_duplex \
+						tx rx tx_err rx_err; do
+					_set_attribute "$sysfs/$what" 0
+				done
+			fi
+			for what in "$@"; do
+				case "$what" in
+					""|*[!a-z0-9_]*)
+						continue
+						;;
+				esac
+				_set_attribute "$sysfs/$what" 1
+			done
 			;;
 		*)
-			internal_error "Unsupported activity arguments:" "$trigger"
+			# Any other trigger the kernel has for this LED and that needs
+			# no setup, such as disk-activity, disk-read, mmc0 or ata1.
+			_set_trigger "$sysfs" "$trigger" || return
 			;;
 	esac
+	return 0
+}
+
+# Set kernel trigger and check that the kernel took it
+_set_trigger() {
+	echo "$2" 2>/dev/null >"$1/trigger" || return
+	grep -qF "[$2]" "$1/trigger"
+}
+
+# Write an attribute of a trigger. The trigger works without the attribute as
+# well, so one that is missing or that the kernel refuses in the combination
+# with the others is not a failure.
+_set_attribute() {
+	[ -e "$1" ] || return 0
+	echo "$2" 2>/dev/null >"$1" || true
 }

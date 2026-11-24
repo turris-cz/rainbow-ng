@@ -36,7 +36,12 @@ call_for_leds_config_level() {
 	local slot="$2"
 	local fnc="$3"
 	shift 3
-	local file="$rainbowdir/$(printf "%03d" "$priority")-$slot"
+	local name
+	name="$(printf "%03d" "$priority")-$slot"
+	local file="$rainbowdir/$name"
+	# The name of the temporary file starts with a dot, so that a leftover of
+	# an interrupted run is not taken for one of the levels.
+	local tmpfile="$rainbowdir/.$name.new"
 	{
 		if [ -f "$file" ]; then
 			cat "$file"
@@ -45,12 +50,15 @@ call_for_leds_config_level() {
 				printf -- "-\t-\t-\t-\n"
 			done
 		fi
-	} | parse_leds_file "$fnc" "$@" > "$file.new"
-	if grep -qv '^-\t-\t-\t-' "$file.new"; then
-		mv "$file.new" "$file"
+	} | parse_leds_file "$fnc" "$@" > "$tmpfile"
+	if awk -F'\t' '
+			$1 != "-" || $2 != "-" || $3 != "-" || $4 != "-" { found = 1 }
+			END { exit !found }
+		' "$tmpfile"; then
+		mv "$tmpfile" "$file"
 	else
 		# The configuration is empty so we no longer need it
-		rm -f "$file" "$file.new"
+		rm -f "$file" "$tmpfile"
 	fi
 }
 
@@ -60,9 +68,18 @@ call_for_leds_config() {
 	local fnc="$1"; shift
 	awk -F'\t' '
 		{
-			for (i=1; i<=NF; i++)
-				if (fields[FNR,i] == "" || $i != "-")
-					fields[FNR,i]=$i
+			for (i = 1; i <= 3; i++)
+				if (!((FNR,i) in fields) || (i <= NF && $i != "-"))
+					fields[FNR,i] = (i <= NF) ? $i : "-"
+			# The mode comes together with its arguments, so the ones from
+			# the lower levels must not stay behind it.
+			if (!((FNR,4) in fields) || (NF >= 4 && $4 != "-")) {
+				for (i = 4; (FNR,i) in fields; i++)
+					delete fields[FNR,i]
+				fields[FNR,4] = "-"
+				for (i = 4; i <= NF; i++)
+					fields[FNR,i] = $i
+			}
 		}
 		END {
 			OFS="\t"

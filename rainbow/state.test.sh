@@ -1,12 +1,10 @@
-#!/bin/ash
+#!/bin/bash
 
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright 2022, CZ.NIC z.s.p.o. (https://www.nic.cz/)
 
 set -eu
-loadsrc() {
-	. "${0%/*}/$1.sh"
-}
+. "${0%/*}/utils.sh"
 loadsrc state
 
 rainbowdir="$(mktemp -d)"
@@ -32,21 +30,16 @@ cmp_file() (
 default() {
 	true
 }
+# A level where nothing is set is not stored
 call_for_leds_config_level 50 "default" default
-cmp_file 50 "default" <<EOF
--	-	-	-
--	-	-	-
--	-	-	-
--	-	-	-
--	-	-	-
-EOF
+[ ! -e "$rainbowdir/050-default" ] || fail "Empty level was stored"
 
 set_wlan-1() {
 	if [ "$led" = "wlan-1" ]; then
 		color_r=255
 		color_g=0
 		color_b=127
-		status="auto"
+		mode="auto"
 	fi
 }
 call_for_leds_config_level 51 "wlan-1" set_wlan-1
@@ -63,8 +56,8 @@ modify_wlan-1() {
 		color_r=0
 		color_g=255
 		color_b=0
-		status="trigger"
-		status_args="netdev	wlan-1	link tx rx"
+		mode="activity"
+		mode_args="netdev-wlan0	link	tx	rx"
 	fi
 }
 call_for_leds_config_level 51 "wlan-1" modify_wlan-1
@@ -72,7 +65,7 @@ cmp_file 51 "wlan-1" <<EOF
 -	-	-	-
 -	-	-	-
 -	-	-	-
-0	255	0	trigger	netdev	wlan-1	link tx rx
+0	255	0	activity	netdev-wlan0	link	tx	rx
 -	-	-	-
 EOF
 
@@ -80,8 +73,8 @@ modify_all() {
 	color_r=127
 	color_g=128
 	color_b=255
-	status="auto"
-	status_args=""
+	mode="auto"
+	mode_args=""
 }
 call_for_leds_config_level 49 "all" modify_all
 cmp_file 49 "all" <<EOF
@@ -107,8 +100,8 @@ complete_config() {
 			r=0
 			g=255
 			b=0
-			s="trigger"
-			a="netdev	wlan-1	link tx rx"
+			s="activity"
+			a="netdev-wlan0	link	tx	rx"
 			;;
 		*)
 			fail "Invalid led: $led"
@@ -117,7 +110,34 @@ complete_config() {
 	[ "$color_r" = "$r" ] || fail "Red color does not match: $color_r != $r"
 	[ "$color_g" = "$g" ] || fail "Green color does not match: $color_g != $g"
 	[ "$color_b" = "$b" ] || fail "Blue color does not match: $color_b != $b"
-	[ "$status" = "$s" ] || fail "Status does not match: $status != $s"
-	[ "$status_args" = "$a" ] || fail "Status arguments does not match: '$status_args' != '$a'"
+	[ "$mode" = "$s" ] || fail "Mode does not match: $mode != $s"
+	[ "$mode_args" = "$a" ] || fail "Mode arguments do not match: '$mode_args' != '$a'"
 }
+call_for_leds_config complete_config
+
+
+# A mode set on a higher level replaces the arguments of the lower one
+set_enable() {
+	if [ "$led" = "wlan-1" ]; then
+		mode="enable"
+		mode_args=""
+	fi
+}
+call_for_leds_config_level 60 "enable" set_enable
+check_enable() {
+	[ "$led" != "wlan-1" ] && return
+	[ "$mode" = "enable" ] || fail "Mode does not match: $mode != enable"
+	[ -z "$mode_args" ] || fail "Arguments of the lower level were kept: '$mode_args'"
+}
+call_for_leds_config check_enable
+
+# A level with nothing set is removed
+unset_all() {
+	color_r="-" color_g="-" color_b="-" mode="-" mode_args=""
+}
+call_for_leds_config_level 60 "enable" unset_all
+[ ! -e "$rainbowdir/060-enable" ] || fail "Empty level was not removed"
+
+# A temporary file that was left behind is not one of the levels
+echo "junk" >"$rainbowdir/.049-all.new"
 call_for_leds_config complete_config

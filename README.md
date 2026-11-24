@@ -26,11 +26,22 @@ options:
   `rainbow all -h` for possible values. Note that inheritance is not supported
   in UCI configuration as there is nowhere to inherit values from.
 * `mode`: default mode of LED. Continue reading for all available modes (the
-  default is `auto`).
+  default is `auto`). The option `status` from Turris OS 5 and older is read as
+  well.
+
+The LAN LEDs of the Turris 1.x share one color in the hardware. When they are
+given different colors, all of them show the color of the highest numbered one
+that is not disabled.
 
 The section `all` serves as global defaults for other LEDs. It has also one
 additional option `brightness`. It is an integer between 0 and 255 specifying
 global LEDs brightness.
+
+The brightness can be set at runtime with `rainbow brightness`. It takes one of
+the levels 0 to 8, or the exact value between 0 and 255 with the option `-p`.
+On Turris Omnia the levels are the steps of the button on the router, which are
+0, 1, 5, 12, 25, 40, 70 and 100 percent. On the other boards they are spread
+evenly. `rainbow brightness -q` always prints the value between 0 and 255.
 
 The `mode` option can have the following values:
 
@@ -65,32 +76,49 @@ in `rainbow` config):
 * `heartbeat`: Variant on `activity` that blinks twice instead of once.
 * `heartbeat-inverted`: Variant on `activity-inverted` for `heartbeat`.
 * `disk-activity`: Blinks with disk activity (any disk activity is considered).
+* `disk-read` and `disk-write`: Blinks only when a disk is read or only when it
+  is written.
 * `usbport`: Blinks with activity on any USB port.
 * `netdev-NETDEV`: Blink with activity on a specific network device where `NETDEV`
   is the name of that device.
 * `mmcX`: Flashes when writing or reading to and from a specific MMC device where
   `X` is the index of that device.
 * `phyX`: Blinks with activity on wireless interface where `X`is index of that
-  interface.
+  interface. This is a short form of the kernel trigger `phyXtpt`. The other
+  triggers of the wireless device, such as `phyXrx` and `phyXtx`, can be used by
+  their full name.
 * `ataX`: Blink when writing or reading to and from a specific ATA device where
   `X` is the index of that device.
 * `netfilter-ID`: Flashes when firewall rule with specified `ID` is triggered.
 
+Any other trigger that the kernel offers for the LED and that needs no further
+setup can be used by its name as well.
+
 The full list of available activities is available by invoking:
 `rainbow all activity -l`.
+
+For the LEDs configured in the UCI config `system` Rainbow understands the
+triggers `none`, `default-on`, `heartbeat`, `timer` (with `delayon` and
+`delayoff`), `netdev` (with `dev` and `mode`), `usbport` and every trigger
+listed by the command above. An LED with any other trigger, or with a `netdev`
+trigger that has no usable `dev`, is reported and left alone, so that it stays
+the way `/etc/init.d/led` configured it.
 
 ### Animate
 
 This allows the specification of animation patterns. The simplest variant is periodically
 enabling and disabling the LED, but more complex patterns can be specified as well.
 
-The animation is specified as a set of color and time in nanosecond pairs. The
+The animation is specified as a set of color and time in millisecond pairs. The
 color changes from one color to the next one in the duration of the specified time.
 
 In the configuration, the animation is specified as a list of those color and time in
-nanoseconds pairs. For example the following UCI list gradually dims and
-light ups green color on the power LED:
+milliseconds pairs. For example the following UCI list gradually dims and
+light ups green color on all the LEDs:
 `rainbow.all.animation='green 1000' 'black 1000'`
+
+The animations are played by the `rainbow-animator` service. It is a separate
+package and nothing is animated when it is not installed.
 
 
 ## Hardware integration
@@ -114,6 +142,10 @@ the `rainbow-button-sync` service and the `button_sync.sh` shell script. The
 additional function to be present there - `get_brightness`. The configuration is
 saved to the UCI config `rainbow`.
 
+The brightness in the hardware also changes when Rainbow applies the value from
+UCI. With the functions `get_brightness_raw` and `brightness_to_raw` in the
+backend the button sync recognizes such a change and leaves UCI as it is.
+
 ### Animator
 
 The animations are designed to work well with the Kernel LED pattern trigger. The
@@ -131,6 +163,13 @@ The animator can be configured to limit the number of updates which is highly
 desirable to not load the CPU with LED animations. By default, the number of updates in
 a second is set to 15. You can use UCI `rainbow.animation.ups` to set a different
 value if you want to tweak it.
+
+## Tests
+
+The unit tests of the parsers and of the state handling are run with:
+```
+%: make test
+```
 
 ## Installation
 
