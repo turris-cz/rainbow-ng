@@ -29,6 +29,10 @@ options:
   default is `auto`). The option `status` from Turris OS 5 and older is read as
   well.
 
+The LAN LEDs of the Turris 1.x share one color in the hardware. When they are
+given different colors, all of them show the color of the highest numbered one
+that is not disabled.
+
 The section `all` serves as global defaults for other LEDs. It has also one
 additional option `brightness`. It is an integer between 0 and 255 specifying
 global LEDs brightness.
